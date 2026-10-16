@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "leadlint"
+dynamic = ["version"]
+description = "A linter for B2B lead lists, built for AI agents. Local, free, deterministic: nothing leaves the machine."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+dependencies = ["openpyxl>=3.0"]
+authors = [{ name = "ZEROGRAVITY" }]
+keywords = ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "blacklist", "deduplication", "personas", "ai-agents"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Office/Business",
+]
+
+[project.urls]
+Homepage = "https://github.com/Gremelinn0/sales-leadlint"
+Repository = "https://github.com/Gremelinn0/sales-leadlint"
+"Web version" = "https://zerogravity.builders/outils/segmentation"
+
+[project.scripts]
+leadlint = "leadlint:main"
+
+# One engine, one copy: skills/leadlint/scripts/leadlint.py. The version lives in that file (VERSION).
+[tool.hatch.version]
+path = "skills/leadlint/scripts/leadlint.py"
+
+# The wheel ships that same file as the top-level module `leadlint`, and the matrices next to it
+# (leadlint_data/matrices/), where the script looks for them once installed.
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+[tool.hatch.build.targets.wheel.force-include]
+"skills/leadlint/scripts/leadlint.py" = "leadlint.py"
+"skills/leadlint/matrices" = "leadlint_data/matrices"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/pyproject.toml",
+  "/README.md",
+  "/LICENSE",
+  "/skills/leadlint/scripts/leadlint.py",
+  "/skills/leadlint/matrices",
+  "/skills/leadlint/exemples",
+  "/skills/leadlint/references",
+  "/skills/leadlint/SKILL.md",
+  "/tests",
+]

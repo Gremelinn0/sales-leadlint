@@ -1,18 +1,18 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "moulinette-b2b",
+  "name": "leadlint",
   "owner": {
     "name": "Florent Maisoncelle"
   },
   "metadata": {
-    "description": "Requalifier et revalider une base de contacts B2B, en local.",
-    "version": "1.0.0"
+    "description": "A linter for B2B lead lists, built for AI agents. Local, free, deterministic.",
+    "version": "1.1.0"
   },
   "plugins": [
     {
-      "name": "moulinette-b2b",
+      "name": "leadlint",
       "source": "./",
-      "description": "Trier des intitulés de poste en personas, et revalider un export de prospection selon les règles d'une mission : verdict et cause par ligne, liste d'exclusion, doublons, prévol, classeur de contrôle et bilan pour agent.",
+      "description": "Sort job titles into personas, and revalidate a prospecting export against a mission's rules: a verdict and a cause per line, exclusion list, duplicates, preflight, QA workbook and a bilan for agents.",
       "category": "sales"
     }
   ]

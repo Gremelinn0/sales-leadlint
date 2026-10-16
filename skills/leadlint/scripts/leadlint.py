@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""La moulinette B2B : requalifier et revalider une base de contacts, en local.
+"""leadlint: a linter for B2B lead lists, built for AI agents. Local and deterministic.
 
-Quatre commandes :
+Four commands (the French names stay valid, as exact aliases):
 
-  personas    trie une colonne d'intitulés de poste selon une matrice
-              (catégorie, séniorité, rôle d'achat déduit).
-  b2b         revalide un export (comptes et contacts) selon la moulinette d'une
-              mission : règles, liste d'exclusion, doublons, contrôle avant
-              lancement (prévol), classeur de contrôle et bilan.
-  prevol      dit seulement si la mission peut tourner, contrôle par contrôle.
-  empreintes  calcule les empreintes que la mission mémorise (stratégie,
-              recherche, filtres, liste d'exclusion).
+  personas      sorts a column of job titles with a matrix
+                (department, seniority, inferred buying role).
+  check         (alias b2b) revalidates a prospecting export against a mission:
+                rules, exclusion list, duplicates, preflight, QA workbook, bilan.
+  preflight     (alias prevol) says only whether the mission may run, control by control.
+  fingerprints  (alias empreintes) computes the fingerprints the mission memorises
+                (strategy, search, filters, exclusion list).
 
-Exemples :
+Examples:
 
-  python moulinette.py personas contacts.xlsx
-  python moulinette.py b2b export.csv --moulinette mission.json --blacklist exclusions.csv
-  python moulinette.py b2b export.csv --moulinette mission.json --diagnostic --json
+  leadlint personas contacts.xlsx
+  leadlint check export.csv --mission mission.json --blacklist exclusions.csv
+  leadlint check export.csv --mission mission.json --diagnostic --json
 
-Le fichier de la mission est le même que celui de la page web de la moulinette :
-un JSON de configuration (ou un setup complet qui la contient). Rien ne sort de la
-machine : aucun appel réseau, aucune donnée envoyée.
+The mission file is the one the web page saves (https://zerogravity.builders/outils/segmentation):
+a JSON configuration, or a full setup that contains it. `--moulinette` stays accepted as an
+alias of `--mission`. Nothing leaves the machine: no network call, no data sent.
 
-Codes de sortie : 0 terminé · 2 prévol bloqué (rien n'est livré) · 1 erreur d'entrée.
+Exit codes: 0 done (both bilan invariants hold) · 2 preflight blocked (nothing is delivered) ·
+1 unreadable input or wrong bilan.
 
-Ce moteur est le jumeau exact de celui de la page web (src/lib/segmentation de la
-Marketplace ZEROGRAVITY) : mêmes règles, mêmes verdicts, mêmes empreintes. Le banc
-`tests/test_moulinette.py` le prouve sur des scénarios rendus par le moteur web.
+This engine is the exact twin of the web page's (src/lib/segmentation of the ZEROGRAVITY
+Marketplace): same rules, same verdicts, same fingerprints. `tests/test_leadlint.py` proves it on
+scenarios rendered by the web engine. Verdicts, report lines, JSON keys and workbook labels stay in
+French on purpose: they are the web page's.
 """
 
 from __future__ import annotations
@@ -47,9 +48,23 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 ICI = Path(__file__).resolve().parent
-MATRICE_DEFAUT = ICI.parent / "matrices" / "matrice-generique.json"
+
+
+def _dossier_matrices() -> Path:
+    """Les matrices se trouvent à deux endroits selon la façon dont le script est lancé.
+
+    Installé en paquet (uvx, pip) : `leadlint_data/matrices/` est livré à côté du module.
+    Lancé depuis la compétence : `skills/leadlint/matrices/`, un cran au-dessus de `scripts/`.
+    """
+    for candidat in (ICI / "leadlint_data" / "matrices", ICI.parent / "matrices"):
+        if candidat.is_dir():
+            return candidat
+    return ICI.parent / "matrices"
+
+
+MATRICE_DEFAUT = _dossier_matrices() / "matrice-generique.json"
 
 # --------------------------------------------------------------------------- utilitaires « comme le navigateur »
 
@@ -1213,7 +1228,7 @@ def ecrire_classeur_b2b(chemin: Path, lignes: list[dict], configuration: dict, p
           for r in configuration["regles"] if vrai(r.get("active"))],
         ["Prévol", "autorisé" if prevol["autorise"] else f"BLOQUÉ — {', '.join(c['id'] for c in prevol['controles'] if c['bloquant'] and not c['valide'])}"],
         ["Nature du passage", mention],
-        ["Outil", f"moulinette.py {VERSION}"],
+        ["Outil", f"leadlint {VERSION}"],
     ]
     feuille = _feuille(classeur, "Résumé", "ResumeMoulinette", ["Indicateur", "Valeur"], resume, [46, 90])
     feuille["B7"].number_format = "yyyy-mm-dd hh:mm"
@@ -1289,7 +1304,7 @@ def commande_b2b(args) -> int:
     bloques = [c for c in prevol["controles"] if c["bloquant"] and not c["valide"]]
     if not prevol["autorise"] and not args.diagnostic:
         _ecrire_sortie(
-            {"outil": "moulinette", "version": VERSION, "commande": "b2b", "mission": identite, "prevol": prevol, "livre": False},
+            {"outil": "leadlint", "version": VERSION, "commande": "b2b", "mission": identite, "prevol": prevol, "livre": False},
             args.json,
             [f"Moulinette « {nom} » — {args.export.name}", f"Prévol BLOQUÉ : {len(bloques)} contrôle(s) à lever, rien n'est livré."]
             + [f"  ✗ {c['libelle']}" for c in bloques]
@@ -1309,7 +1324,7 @@ def commande_b2b(args) -> int:
         fichiers["conformes"] = str(dossier / f"{_base(args.export)}-conformes.xlsx")
         ecrire_conformes_b2b(Path(fichiers["conformes"]), lignes, configuration)
     sortie = {
-        "outil": "moulinette", "version": VERSION, "commande": "b2b", "mission": identite,
+        "outil": "leadlint", "version": VERSION, "commande": "b2b", "mission": identite,
         "prevol": prevol, "diagnostic": diagnostic, "livre": not diagnostic, **bilan, "fichiers": fichiers,
     }
     if args.lignes:
@@ -1331,7 +1346,7 @@ def commande_prevol(args) -> int:
     identite, configuration, candidats, blacklist, _ = _charger_b2b(args)
     prevol = _prevol(configuration, candidats, blacklist)
     _ecrire_sortie(
-        {"outil": "moulinette", "version": VERSION, "commande": "prevol", "mission": identite, "prevol": prevol},
+        {"outil": "leadlint", "version": VERSION, "commande": "prevol", "mission": identite, "prevol": prevol},
         args.json,
         [f"Prévol « {_nom_mission(identite, args.moulinette)} » : {'autorisé' if prevol['autorise'] else 'BLOQUÉ'}"]
         + [f"  {'✓' if c['valide'] else '✗' if c['bloquant'] else '·'} {c['libelle']}" for c in prevol["controles"]],
@@ -1354,7 +1369,7 @@ def commande_empreintes(args) -> int:
         mapping = completer_mapping(configuration["mappingBlacklist"], entetes, ENTETES_BLACKLIST)
         objets = vers_objets(entetes, lignes)
         empreintes.update({"blacklist": empreinte_blacklist(objets, mapping), "blacklist_volume": len(objets)})
-    _ecrire_sortie({"outil": "moulinette", "version": VERSION, "commande": "empreintes", "mission": identite, **empreintes}, args.json,
+    _ecrire_sortie({"outil": "leadlint", "version": VERSION, "commande": "empreintes", "mission": identite, **empreintes}, args.json,
                    [f"{cle} : {valeur}" for cle, valeur in empreintes.items()])
     return 0
 
@@ -1401,43 +1416,44 @@ def commande_personas(args) -> int:
         if axe["non_classes"]:
             texte.append("    non classés : " + " | ".join(f"{k} ({v})" for k, v in list(axe["non_classes"].items())[:5]))
     texte.append(f"Écrit : {destination}")
-    _ecrire_sortie({"outil": "moulinette", "version": VERSION, "commande": "personas", "colonne": entetes[index], "total": resultat["total"], "axes": axes, "fichier": str(destination)}, args.json, texte)
+    _ecrire_sortie({"outil": "leadlint", "version": VERSION, "commande": "personas", "colonne": entetes[index], "total": resultat["total"], "axes": axes, "fichier": str(destination)}, args.json, texte)
     return 0
 
 
 def construire_parseur() -> argparse.ArgumentParser:
-    parseur = argparse.ArgumentParser(prog="moulinette", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parseur.add_argument("--version", action="version", version=f"moulinette {VERSION}")
-    sous = parseur.add_subparsers(dest="commande", required=True)
+    parseur = argparse.ArgumentParser(prog="leadlint", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parseur.add_argument("--version", action="version", version=f"leadlint {VERSION}")
+    sous = parseur.add_subparsers(dest="commande", required=True, metavar="{personas,check,preflight,fingerprints}")
 
-    personas = sous.add_parser("personas", help="trier une colonne d'intitulés de poste")
-    personas.add_argument("entree", type=Path, help="fichier .xlsx, .xlsm ou .csv")
-    personas.add_argument("-m", "--matrice", type=Path, help="matrice JSON ou mission « persona » (défaut : matrice générique)")
-    personas.add_argument("-o", "--sortie", type=Path, help="fichier de sortie (défaut : <entrée>-qualifie.xlsx)")
-    personas.add_argument("-c", "--colonne", help="nom exact de la colonne des intitulés (sinon devinée)")
-    personas.add_argument("--multi", action="store_true", help="garder toutes les catégories trouvées, par priorité")
-    personas.add_argument("--json", action="store_true", help="bilan JSON sur la sortie standard (pour un agent)")
+    personas = sous.add_parser("personas", help="sort a column of job titles")
+    personas.add_argument("entree", type=Path, help="file .xlsx, .xlsm or .csv")
+    personas.add_argument("-m", "--matrice", type=Path, help="JSON matrix or \"persona\" mission (default: the generic matrix)")
+    personas.add_argument("-o", "--sortie", type=Path, help="output file (default: <input>-qualifie.xlsx)")
+    personas.add_argument("-c", "--colonne", help="exact name of the job-title column (guessed otherwise)")
+    personas.add_argument("--multi", action="store_true", help="keep every category found, by priority")
+    personas.add_argument("--json", action="store_true", help="JSON bilan on standard output (for an agent)")
     personas.set_defaults(action=commande_personas)
 
-    for nom, aide, action in (
-        ("b2b", "revalider un export selon la moulinette d'une mission", commande_b2b),
-        ("prevol", "dire seulement si la mission peut tourner", commande_prevol),
+    # Noms anglais d'abord, noms français en alias exact : même action, mêmes options, mêmes sorties.
+    for nom, alias, aide, action in (
+        ("check", "b2b", "revalidate an export against a mission", commande_b2b),
+        ("preflight", "prevol", "say only whether the mission may run", commande_prevol),
     ):
-        commande = sous.add_parser(nom, help=aide)
-        commande.add_argument("export", type=Path, help="export candidats .xlsx, .xlsm ou .csv")
-        commande.add_argument("--moulinette", type=Path, required=True, help="fichier JSON de la mission")
-        commande.add_argument("--blacklist", type=Path, help="liste d'exclusion .xlsx ou .csv")
-        commande.add_argument("--json", action="store_true", help="bilan JSON sur la sortie standard (pour un agent)")
-        if nom == "b2b":
-            commande.add_argument("-o", "--sortie", type=Path, help="dossier de sortie (défaut : celui de l'export)")
-            commande.add_argument("--diagnostic", action="store_true", help="rendre les verdicts même si le prévol bloque ; rien de livrable")
-            commande.add_argument("--lignes", action="store_true", help="ajouter le verdict de chaque ligne au bilan JSON")
+        commande = sous.add_parser(nom, aliases=[alias], help=aide)
+        commande.add_argument("export", type=Path, help="candidates export .xlsx, .xlsm or .csv")
+        commande.add_argument("--mission", "--moulinette", dest="moulinette", metavar="MISSION", type=Path, required=True, help="mission JSON file (--moulinette is an alias)")
+        commande.add_argument("--blacklist", type=Path, help="exclusion list .xlsx or .csv")
+        commande.add_argument("--json", action="store_true", help="JSON bilan on standard output (for an agent)")
+        if nom == "check":
+            commande.add_argument("-o", "--sortie", type=Path, help="output folder (default: the export's folder)")
+            commande.add_argument("--diagnostic", action="store_true", help="return the verdicts even if the preflight blocks; nothing deliverable")
+            commande.add_argument("--lignes", action="store_true", help="add each line's verdict to the JSON bilan")
         commande.set_defaults(action=action)
 
-    empreintes = sous.add_parser("empreintes", help="calculer les empreintes que la mission mémorise")
-    empreintes.add_argument("--moulinette", type=Path, required=True, help="fichier JSON de la mission")
-    empreintes.add_argument("--blacklist", type=Path, help="liste d'exclusion, pour son empreinte et son volume")
-    empreintes.add_argument("--json", action="store_true", help="sortie JSON")
+    empreintes = sous.add_parser("fingerprints", aliases=["empreintes"], help="compute the fingerprints the mission memorises")
+    empreintes.add_argument("--mission", "--moulinette", dest="moulinette", metavar="MISSION", type=Path, required=True, help="mission JSON file (--moulinette is an alias)")
+    empreintes.add_argument("--blacklist", type=Path, help="exclusion list, for its fingerprint and volume")
+    empreintes.add_argument("--json", action="store_true", help="JSON output")
     empreintes.set_defaults(action=commande_empreintes)
     return parseur
 
@@ -1452,7 +1468,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.action(args)
     except ErreurEntree as erreur:
-        sys.stderr.write(f"moulinette : {erreur}\n")
+        sys.stderr.write(f"leadlint : {erreur}\n")
         return 1
 
 

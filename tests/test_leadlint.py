@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Banc de la moulinette : parité avec le moteur de la page web, puis la ligne de commande de bout en bout.
+"""Banc de leadlint : parité avec le moteur de la page web, puis la ligne de commande de bout en bout.
 
-    python tests/test_moulinette.py
+    python tests/test_leadlint.py
 
 Les attendus de `tests/parite/` sont rendus par le moteur de la page web (oracle
 `scripts/segmentation/oracle_parite.ts` du dépôt de la Marketplace). Le banc rejoue les
@@ -16,6 +16,8 @@ import contextlib
 import csv
 import io
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -23,9 +25,10 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[1]
 PARITE = RACINE / "tests" / "parite"
-sys.path.insert(0, str(RACINE / "skills" / "moulinette-b2b" / "scripts"))
+SCRIPT = RACINE / "skills" / "leadlint" / "scripts" / "leadlint.py"
+sys.path.insert(0, str(SCRIPT.parent))
 
-import moulinette as m  # noqa: E402
+import leadlint as m  # noqa: E402
 
 
 def lire(nom: str):
@@ -168,17 +171,22 @@ def lancer(*arguments: str) -> tuple[int, str]:
     return code, sortie.getvalue()
 
 
+def preparer_mission(scenario: str) -> tuple[Path, Path, Path, Path]:
+    """Un dossier temporaire avec l'export, la liste d'exclusion et la mission d'un scénario de parité."""
+    dossier = Path(tempfile.mkdtemp(prefix="leadlint-"))
+    entree = lire(f"b2b-{scenario}.entree.json")
+    export, exclusions, mission = dossier / "export.csv", dossier / "exclusions.csv", dossier / "mission.json"
+    ecrire_csv(export, entree["candidats"])
+    ecrire_csv(exclusions, entree["blacklist"], ",")
+    mission.write_text(json.dumps({"client": "Client fictif", "mission": "ESN 11-50", "configuration": entree["configuration"]}, ensure_ascii=False), encoding="utf-8")
+    return dossier, export, exclusions, mission
+
+
 class LigneDeCommande(unittest.TestCase):
     """Le script tel qu'un humain ou un agent le lance : fichiers réels, codes de sortie, classeur."""
 
     def preparer(self, scenario: str) -> tuple[Path, Path, Path, Path]:
-        dossier = Path(tempfile.mkdtemp(prefix="moulinette-"))
-        entree = lire(f"b2b-{scenario}.entree.json")
-        export, exclusions, mission = dossier / "export.csv", dossier / "exclusions.csv", dossier / "mission.json"
-        ecrire_csv(export, entree["candidats"])
-        ecrire_csv(exclusions, entree["blacklist"], ",")
-        mission.write_text(json.dumps({"client": "Client fictif", "mission": "ESN 11-50", "configuration": entree["configuration"]}, ensure_ascii=False), encoding="utf-8")
-        return dossier, export, exclusions, mission
+        return preparer_mission(scenario)
 
     def test_mission_validee_rend_les_verdicts_de_la_page(self):
         dossier, export, exclusions, mission = self.preparer("esn-validee")
@@ -261,7 +269,7 @@ class LigneDeCommande(unittest.TestCase):
         self.assertEqual(code, 1)
 
     def test_personas(self):
-        dossier = Path(tempfile.mkdtemp(prefix="moulinette-"))
+        dossier = Path(tempfile.mkdtemp(prefix="leadlint-"))
         fichier = dossier / "contacts.csv"
         ecrire_csv(fichier, [{"Nom": "A", "Job title": "Directeur RSE"}, {"Nom": "B", "Job title": "Chargé IT"}, {"Nom": "C", "Job title": "Office manager"}], ",")
         code, sortie = lancer("personas", str(fichier), "--json")
@@ -270,6 +278,189 @@ class LigneDeCommande(unittest.TestCase):
         self.assertEqual(bilan["colonne"], "Job title")
         self.assertEqual(bilan["total"], 3)
         self.assertTrue(Path(bilan["fichier"]).exists())
+
+
+def cellules_du_classeur(chemin: str) -> dict:
+    """Toutes les cellules d'un classeur, sauf l'horodatage du contrôle (la seule valeur qui change d'un passage à l'autre)."""
+    import openpyxl
+    rendu = {}
+    for feuille in openpyxl.load_workbook(chemin).worksheets:
+        for ligne in feuille.iter_rows():
+            for cellule in ligne:
+                if feuille.title == "Résumé" and cellule.column == 2 and feuille.cell(cellule.row, 1).value == "Contrôle effectué le":
+                    continue
+                rendu[(feuille.title, cellule.coordinate)] = cellule.value
+    return rendu
+
+
+class NomsAnglais(unittest.TestCase):
+    """Les noms anglais sont des alias exacts des noms français : même sortie, octet pour octet, même code de sortie."""
+
+    def deux_passages(self, francais: str, anglais: str, scenario: str, *options: str, avec_export: bool = True):
+        """Le même appel sous le nom français et le nom anglais, dans le même dossier (donc avec les mêmes chemins écrits)."""
+        dossier, export, exclusions, mission = preparer_mission(scenario)
+        base = ([str(export)] if avec_export else []) + ["--blacklist", str(exclusions), *options]
+        return lancer(francais, *base, "--moulinette", str(mission)), lancer(anglais, *base, "--mission", str(mission))
+
+    def test_check_vaut_b2b(self):
+        for scenario, options, code_attendu in (
+            ("esn-validee", ("--json", "--lignes"), 0),
+            ("esn-validee", (), 0),
+            ("esn-non-validee", ("--json",), 2),
+            ("esn-non-validee", (), 2),
+            ("esn-non-validee", ("--json", "--diagnostic"), 0),
+            ("esn-non-validee", ("--diagnostic",), 0),
+        ):
+            with self.subTest(scenario=scenario, options=options):
+                (code_fr, sortie_fr), (code_en, sortie_en) = self.deux_passages("b2b", "check", scenario, *options)
+                self.assertEqual((code_fr, code_en), (code_attendu, code_attendu))
+                self.assertEqual(sortie_fr, sortie_en)
+                self.assertTrue(sortie_fr)
+
+    def test_check_ecrit_les_memes_classeurs_que_b2b(self):
+        dossier, export, exclusions, mission = preparer_mission("esn-validee")
+        base = [str(export), "--moulinette", str(mission), "--blacklist", str(exclusions), "--json"]
+        code_fr, sortie_fr = lancer("b2b", *base)
+        fichiers_fr = {cle: cellules_du_classeur(chemin) for cle, chemin in json.loads(sortie_fr)["fichiers"].items()}
+        code_en, sortie_en = lancer("check", *base)
+        fichiers_en = {cle: cellules_du_classeur(chemin) for cle, chemin in json.loads(sortie_en)["fichiers"].items()}
+        self.assertEqual((code_fr, code_en), (0, 0))
+        self.assertEqual(fichiers_fr, fichiers_en)
+        self.assertTrue(all(fichiers_en.values()))
+
+    def test_preflight_vaut_prevol(self):
+        for scenario, code_attendu in (("esn-validee", 0), ("esn-non-validee", 2)):
+            for options in ((), ("--json",)):
+                with self.subTest(scenario=scenario, options=options):
+                    (code_fr, sortie_fr), (code_en, sortie_en) = self.deux_passages("prevol", "preflight", scenario, *options)
+                    self.assertEqual((code_fr, code_en), (code_attendu, code_attendu))
+                    self.assertEqual(sortie_fr, sortie_en)
+                    self.assertTrue(sortie_fr)
+
+    def test_fingerprints_vaut_empreintes(self):
+        for options in ((), ("--json",)):
+            with self.subTest(options=options):
+                (code_fr, sortie_fr), (code_en, sortie_en) = self.deux_passages("empreintes", "fingerprints", "esn-validee", *options, avec_export=False)
+                self.assertEqual((code_fr, code_en), (0, 0))
+                self.assertEqual(sortie_fr, sortie_en)
+                self.assertTrue(sortie_fr)
+
+    def test_les_alias_se_melangent_sans_changer_le_resultat(self):
+        """Nom anglais avec l'option française, nom français avec l'option anglaise : toujours la même sortie."""
+        dossier, export, exclusions, mission = preparer_mission("esn-validee")
+        commun = [str(export), "--blacklist", str(exclusions), "--json", "--lignes"]
+        reference = lancer("b2b", *commun, "--moulinette", str(mission))
+        for nom, drapeau in (("check", "--moulinette"), ("b2b", "--mission")):
+            with self.subTest(commande=nom, option=drapeau):
+                self.assertEqual(lancer(nom, *commun, drapeau, str(mission)), reference)
+
+    def test_entree_illisible_sort_en_1_sous_les_deux_noms(self):
+        self.assertEqual(lancer("b2b", "introuvable.csv", "--moulinette", "introuvable.json")[0], 1)
+        self.assertEqual(lancer("check", "introuvable.csv", "--mission", "introuvable.json")[0], 1)
+
+    def test_la_mission_reste_obligatoire_sous_tous_les_noms(self):
+        for nom in ("check", "b2b", "preflight", "prevol"):
+            with self.subTest(commande=nom), self.assertRaises(SystemExit) as arret:
+                lancer(nom, "export.csv")
+            self.assertEqual(arret.exception.code, 2)
+        for nom in ("fingerprints", "empreintes"):
+            with self.subTest(commande=nom), self.assertRaises(SystemExit) as arret:
+                lancer(nom)
+            self.assertEqual(arret.exception.code, 2)
+
+    def test_l_outil_se_presente_sous_son_nouveau_nom(self):
+        dossier, export, exclusions, mission = preparer_mission("esn-validee")
+        contacts = dossier / "contacts.csv"
+        ecrire_csv(contacts, [{"Nom": "A", "Job title": "Directeur RSE"}], ",")
+        sorties = {
+            "check": lancer("check", str(export), "--mission", str(mission), "--blacklist", str(exclusions), "--json")[1],
+            "preflight": lancer("preflight", str(export), "--mission", str(mission), "--blacklist", str(exclusions), "--json")[1],
+            "fingerprints": lancer("fingerprints", "--mission", str(mission), "--json")[1],
+            "personas": lancer("personas", str(contacts), "--json")[1],
+        }
+        for nom, sortie in sorties.items():
+            with self.subTest(commande=nom):
+                bilan = json.loads(sortie)
+                self.assertEqual(bilan["outil"], "leadlint")
+                self.assertEqual(bilan["version"], m.VERSION)
+        resume = cellules_du_classeur(json.loads(sorties["check"])["fichiers"]["controle_qa"])
+        lignes_outil = [v for (feuille, coordonnee), v in resume.items() if feuille == "Résumé" and coordonnee.startswith("B")]
+        self.assertIn(f"leadlint {m.VERSION}", lignes_outil)
+        self.assertNotIn(f"moulinette.py {m.VERSION}", lignes_outil)
+
+    def test_les_sept_noms_sont_dans_l_aide(self):
+        aide = io.StringIO()
+        with contextlib.redirect_stdout(aide), self.assertRaises(SystemExit):
+            m.main(["--help"])
+        for mot in ("personas", "check", "b2b", "preflight", "prevol", "fingerprints", "empreintes"):
+            self.assertIn(mot, aide.getvalue())
+
+
+class Paquet(unittest.TestCase):
+    """Le moteur est une seule copie ; installé en paquet, il retrouve ses matrices à côté de lui."""
+
+    def installer_comme_un_paquet(self, matrice_generique: dict | None = None) -> Path:
+        """Reproduit la disposition de site-packages : le module et `leadlint_data/matrices/` côte à côte."""
+        site = Path(tempfile.mkdtemp(prefix="leadlint-site-"))
+        shutil.copy(SCRIPT, site / "leadlint.py")
+        donnees = site / "leadlint_data" / "matrices"
+        shutil.copytree(RACINE / "skills" / "leadlint" / "matrices", donnees)
+        if matrice_generique is not None:
+            (donnees / "matrice-generique.json").write_text(json.dumps(matrice_generique, ensure_ascii=False), encoding="utf-8")
+        return site
+
+    def personas(self, script: Path) -> dict:
+        dossier = Path(tempfile.mkdtemp(prefix="leadlint-travail-"))
+        contacts = dossier / "contacts.csv"
+        ecrire_csv(contacts, [{"Nom": "A", "Job title": "Directeur RSE"}, {"Nom": "B", "Job title": "Chargé IT"}], ",")
+        resultat = subprocess.run(
+            [sys.executable, str(script), "personas", str(contacts), "-o", str(dossier / "qualifie.xlsx"), "--json"],
+            capture_output=True, text=True, encoding="utf-8", cwd=dossier,
+        )
+        self.assertEqual(resultat.returncode, 0, resultat.stderr)
+        bilan = json.loads(resultat.stdout)
+        bilan.pop("fichier")
+        return bilan
+
+    def test_matrice_par_defaut_trouvee_depuis_la_competence(self):
+        self.assertEqual(m.MATRICE_DEFAUT, RACINE / "skills" / "leadlint" / "matrices" / "matrice-generique.json")
+        self.assertTrue(m.MATRICE_DEFAUT.is_file())
+
+    def test_matrice_par_defaut_trouvee_une_fois_installe(self):
+        site = self.installer_comme_un_paquet()
+        self.assertEqual(self.personas(site / "leadlint.py"), self.personas(SCRIPT))
+
+    def test_la_matrice_livree_a_cote_du_module_est_bien_celle_lue(self):
+        """Contrôle négatif : une matrice marquée, posée à côté du module installé, se retrouve dans le résultat."""
+        marquee = json.loads((RACINE / "skills" / "leadlint" / "matrices" / "matrice-generique.json").read_text(encoding="utf-8"))
+        marquee["axes"][0]["libelle"] = "AXE-MARQUE-PAR-LE-TEST"
+        site = self.installer_comme_un_paquet(marquee)
+        self.assertEqual(self.personas(site / "leadlint.py")["axes"][0]["libelle"], "AXE-MARQUE-PAR-LE-TEST")
+        self.assertNotEqual(self.personas(SCRIPT)["axes"][0]["libelle"], "AXE-MARQUE-PAR-LE-TEST")
+
+    def test_un_seul_moteur_dans_le_depot(self):
+        moteurs = [p for p in RACINE.rglob("leadlint.py") if not {".git", "dist", "build", ".venv"} & set(p.parts)]
+        self.assertEqual(moteurs, [SCRIPT])
+
+    def test_versions_alignees(self):
+        for nom in (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json"):
+            donnees = json.loads((RACINE / nom).read_text(encoding="utf-8"))
+            self.assertEqual(donnees.get("version") or donnees["metadata"]["version"], m.VERSION, nom)
+
+    def test_pyproject_declare_la_commande_et_la_source_unique(self):
+        try:
+            import tomllib
+        except ImportError:  # Python < 3.11
+            self.skipTest("tomllib absent (Python < 3.11)")
+        projet = tomllib.loads((RACINE / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertEqual(projet["project"]["name"], "leadlint")
+        self.assertEqual(projet["project"]["scripts"], {"leadlint": "leadlint:main"})
+        self.assertIn("version", projet["project"]["dynamic"])
+        self.assertEqual(projet["tool"]["hatch"]["version"]["path"], "skills/leadlint/scripts/leadlint.py")
+        livre = projet["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
+        self.assertEqual(livre["skills/leadlint/scripts/leadlint.py"], "leadlint.py")
+        for source in livre:
+            self.assertTrue((RACINE / source).exists(), source)
 
 
 if __name__ == "__main__":
