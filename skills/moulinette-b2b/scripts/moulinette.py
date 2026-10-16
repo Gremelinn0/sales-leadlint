@@ -1384,6 +1384,7 @@ def commande_personas(args) -> int:
     cles = [a["id"] for a in matrice.get("axes", [])] + [d["id"] for d in matrice.get("derives", []) or []]
     libelles = [a["libelle"] for a in matrice.get("axes", [])] + [d["libelle"] for d in matrice.get("derives", []) or []]
     destination = args.sortie or args.entree.with_name(f"{_base(args.entree)}-qualifie.xlsx")
+    destination.parent.mkdir(parents=True, exist_ok=True)
     ecrire_personas(destination, list(entetes) + libelles, [list(l) + [v.get(c, "") for c in cles] for l, v in zip(lignes, resultat["lignes"])])
     axes = []
     for axe in matrice.get("axes", []):

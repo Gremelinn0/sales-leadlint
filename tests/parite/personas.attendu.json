@@ -356,8 +356,10 @@
               "priorite": 1,
               "motsCles": [
                 "CEO",
+                "chief executive officer",
                 "fondateur",
                 "fondatrice",
+                "founder",
                 "co-founder",
                 "président",
                 "directeur général",
@@ -494,6 +496,7 @@
               "motsCles": [
                 "fondateur",
                 "fondatrice",
+                "founder",
                 "co-founder"
               ]
             },
@@ -506,6 +509,7 @@
                 "cfo",
                 "cio",
                 "ceo",
+                "chief executive officer",
                 "daf",
                 "dsi",
                 "evp"
@@ -623,7 +627,7 @@
       },
       {
         "categorie": "Founders",
-        "seniorite": "C-Level",
+        "seniorite": "Founder",
         "buyerRole": "Oui"
       },
       {
@@ -700,8 +704,8 @@
       },
       {
         "categorie": "Founders",
-        "seniorite": "C-Level",
-        "buyerRole": "Oui"
+        "seniorite": "Founder, C-Level",
+        "buyerRole": ""
       },
       {
         "categorie": "Purchase / Procurement",
