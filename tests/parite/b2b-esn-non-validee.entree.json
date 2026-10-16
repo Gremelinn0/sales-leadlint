@@ -315,11 +315,11 @@
         {
           "id": "s-7",
           "categorie": "exclusions",
-          "critereClient": "Zéro entreprise blacklistée",
+          "critereClient": "Aucune entreprise de la liste d'exclusion",
           "methode": "liste_exclusion",
           "parametrage": "Liste d'exclusion du client sélectionnée et active",
-          "exclusions": "Toutes les correspondances blacklist",
-          "controleAval": "Empreinte, volume et croisement strict",
+          "exclusions": "Toutes les correspondances avec la liste d'exclusion",
+          "controleAval": "Même liste (nombre de lignes et contenu) et croisement strict",
           "logique": "EXCLURE",
           "precision": "granulaire",
           "obligatoire": true
@@ -337,7 +337,7 @@
           "obligatoire": true
         }
       ],
-      "limites": "Les trois expressions ESN sont réunies dans un même groupe Pharow (OU). Les autres critères sont dans des groupes séparés (ET) et les modèles hors cible dans le groupe d'exclusion. Les termes génériques informatique, IT, software, data, cloud, développement ou conseil tech ne valident jamais l'activité seuls. La catégorie LinkedIn et le nombre d'employés visibles exigent une QA distincte."
+      "limites": "Les trois expressions ESN sont réunies dans un même groupe de filtres (OU). Les autres critères sont dans des groupes séparés (ET) et les modèles hors cible dans le groupe d'exclusion. Les termes génériques informatique, IT, software, data, cloud, développement ou conseil tech ne valident jamais l'activité seuls. La catégorie LinkedIn et le nombre d'employés visibles exigent une QA distincte."
     },
     "pharow": {
       "nomRecherche": "ESN — 11-50",

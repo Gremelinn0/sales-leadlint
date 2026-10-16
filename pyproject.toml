@@ -12,7 +12,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = ["openpyxl>=3.0"]
 authors = [{ name = "ZEROGRAVITY" }]
-keywords = ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "blacklist", "deduplication", "personas", "ai-agents"]
+keywords = ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "exclusion-list", "deduplication", "personas", "ai-agents"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",

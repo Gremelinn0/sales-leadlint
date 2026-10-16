@@ -318,11 +318,11 @@
         {
           "id": "s-7",
           "categorie": "exclusions",
-          "critereClient": "Zéro entreprise blacklistée",
+          "critereClient": "Aucune entreprise de la liste d'exclusion",
           "methode": "liste_exclusion",
           "parametrage": "Liste d'exclusion du client sélectionnée et active",
-          "exclusions": "Toutes les correspondances blacklist",
-          "controleAval": "Empreinte, volume et croisement strict",
+          "exclusions": "Toutes les correspondances avec la liste d'exclusion",
+          "controleAval": "Même liste (nombre de lignes et contenu) et croisement strict",
           "logique": "EXCLURE",
           "precision": "granulaire",
           "obligatoire": true
@@ -340,9 +340,9 @@
           "obligatoire": true
         }
       ],
-      "limites": "Les trois expressions ESN sont réunies dans un même groupe Pharow (OU). Les autres critères sont dans des groupes séparés (ET) et les modèles hors cible dans le groupe d'exclusion. Les termes génériques informatique, IT, software, data, cloud, développement ou conseil tech ne valident jamais l'activité seuls. La catégorie LinkedIn et le nombre d'employés visibles exigent une QA distincte.",
+      "limites": "Les trois expressions ESN sont réunies dans un même groupe de filtres (OU). Les autres critères sont dans des groupes séparés (ET) et les modèles hors cible dans le groupe d'exclusion. Les termes génériques informatique, IT, software, data, cloud, développement ou conseil tech ne valident jamais l'activité seuls. La catégorie LinkedIn et le nombre d'employés visibles exigent une QA distincte.",
       "valideeLe": "2026-10-01T09:00:00.000Z",
-      "empreinteValidee": "fnv1a-22e1abfd"
+      "empreinteValidee": "fnv1a-c7b1871e"
     },
     "pharow": {
       "nomRecherche": "ESN — 11-50",
@@ -439,7 +439,7 @@
       "filtresSaisisApresExtractionLe": "2026-10-01T09:21:00.000Z",
       "exclusionConfirmeeLe": "2026-10-01T09:22:00.000Z",
       "filtresConfirmesLe": "2026-10-01T09:23:00.000Z",
-      "rechercheValideeEmpreinte": "fnv1a-bd9ab80f",
+      "rechercheValideeEmpreinte": "fnv1a-a6e3f30c",
       "filtresConfirmesEmpreinte": "fnv1a-fd2ec0f7"
     }
   },

@@ -25,15 +25,15 @@ A human who prefers a screen can use the same engine in the browser, at https://
 From the skill folder:
 
 ```bash
-python scripts/leadlint.py preflight     export.csv --mission mission.json --blacklist exclusions.csv
-python scripts/leadlint.py check         export.csv --mission mission.json --blacklist exclusions.csv --json
+python scripts/leadlint.py preflight     export.csv --mission mission.json --exclusions exclusions.csv
+python scripts/leadlint.py check         export.csv --mission mission.json --exclusions exclusions.csv --json
 python scripts/leadlint.py personas      contacts.xlsx --json
-python scripts/leadlint.py fingerprints  --mission mission.json --blacklist exclusions.csv
+python scripts/leadlint.py fingerprints  --mission mission.json --exclusions exclusions.csv
 ```
 
-Installed anywhere, no account needed: `uvx --from git+https://github.com/Gremelinn0/sales-leadlint leadlint check export.csv --mission mission.json --blacklist exclusions.csv`.
+Installed anywhere, no account needed: `uvx --from git+https://github.com/Gremelinn0/sales-leadlint leadlint check export.csv --mission mission.json --exclusions exclusions.csv`.
 
-The French names are exact aliases (same result, same exit code): `b2b` = `check`, `prevol` = `preflight`, `empreintes` = `fingerprints`; `--moulinette` = `--mission`.
+Older names still work, as exact aliases (same result, same exit code), though `--help` no longer shows them: `b2b` = `check`, `prevol` = `preflight`, `empreintes` = `fingerprints`; `--moulinette` = `--mission`, `--blacklist` = `--exclusions`. Use the current names.
 
 | Exit code | Meaning |
 |---|---|
@@ -53,19 +53,19 @@ The French names are exact aliases (same result, same exit code): `b2b` = `check
 
 ## What `check` returns
 
-- `<export>-controle-qa.xlsx`: sheet **Contrôle QA** (one row per contact, a verdict editable as a dropdown, problem type, reasons, clickable links, a « Contrôlé le » column to fill), **Audit moulinette** (every control on every line: raw value, normalized value, source column, diagnostic) and **Résumé** (counters, rules applied, preflight state).
+- `<export>-controle-qa.xlsx`: sheet **Contrôle QA** (one row per contact, a verdict editable as a dropdown, problem type, reasons, clickable links, a « Contrôlé le » column to fill), **Contrôle leadlint** (every control on every line: raw value, normalized value, source column, diagnostic) and **Résumé** (counters, rules applied, preflight state).
 - `<export>-conformes.xlsx`: only the compliant lines, ready to deliver.
 - Any cell that would start like a spreadsheet formula (`=`, `+`, `-`, `@`) is neutralized.
 
 ## The mission file
 
-The same JSON the web page saves: a setup (`client`, `mission`, `configuration`) or a configuration alone. It holds the rules (criterion, operator, values, importance, policy when the data is missing), the mandatory fields, the final columns, the column mappings, the exclusion list reference, the search strategy and the filters really used. It never contains the export, the exclusion lines or a secret.
+The same JSON the web page saves: a setup (`client`, `mission`, `configuration`) or a configuration alone. It holds the rules (criterion, operator, values, importance, policy when the data is missing), the mandatory fields, the final columns, the column matching, the exclusion list reference, the search strategy and the filters really used. It never contains the export, the exclusion lines or a secret.
 
 Examples in `exemples/`: `mission-esn-11-50-validee.json` (passes the preflight on `export-exemple.csv`) and `modele-mission-esn-11-50.json` (a template to adapt; it blocks until something is validated). Detail of the criteria, operators and controls: [references/format-mission.md](references/format-mission.md).
 
 ## How it classifies (`check`)
 
-- Columns are guessed from the usual headers (French and English), then overridden by the mappings memorised in the mission when the column exists.
+- Columns are guessed from the usual headers (French and English), then overridden by the column matching memorised in the mission when the column exists.
 - Values are normalized before comparison: accents and punctuation, LinkedIn URL, domain, SIREN, French mobile 06/07, email, numbers written the French way.
 - Exclusion list: matched by company LinkedIn URL, then domain, SIREN, normalized name (legal forms removed).
 - Duplicates: same LinkedIn profile, same email, same mobile, or same name in the same company.
@@ -73,4 +73,4 @@ Examples in `exemples/`: `mission-esn-11-50-validee.json` (passes the preflight 
 
 ## Proof
 
-`python tests/test_leadlint.py` (from the repository root): field-by-field parity with the web page's engine on scenarios rendered by that engine, the command line end to end, each English command equal to its French alias, and negative controls that require the suite to see a deliberate deviation.
+`python tests/test_leadlint.py` (from the repository root): field-by-field parity with the web page's engine on scenarios rendered by that engine, the command line end to end, each older name equal to its current one, a check that nothing a person reads (labels, reasons, workbook, command-line output, `--help`) uses the old vocabulary, and negative controls that require the suite to see a deliberate deviation.

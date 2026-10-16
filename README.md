@@ -21,7 +21,7 @@ Claude Code, Codex, Cursor, or any agent that can run a shell command can do it.
 No account, nothing to configure. With [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uvx --from git+https://github.com/Gremelinn0/sales-leadlint leadlint check export.csv --mission mission.json --blacklist exclusions.csv
+uvx --from git+https://github.com/Gremelinn0/sales-leadlint leadlint check export.csv --mission mission.json --exclusions exclusions.csv
 ```
 
 In Claude Code, install it as a plugin so the agent also gets the skill that tells it when and how to run it:
@@ -35,14 +35,16 @@ Without uv: clone the repository, `python -m pip install openpyxl` (Python 3.9+)
 
 ## Commands
 
-| Command | French alias | What it does |
-|---|---|---|
-| `leadlint check <export> --mission m.json [--blacklist x.csv]` | `b2b` | revalidate an export: a verdict and a cause per line, QA workbook, file of the compliant lines only |
-| `leadlint preflight <export> --mission m.json [--blacklist x.csv]` | `prevol` | say only whether the mission may run, control by control |
-| `leadlint fingerprints --mission m.json [--blacklist x.csv]` | `empreintes` | compute the fingerprints the mission memorises (strategy, search, filters, exclusion list) |
-| `leadlint personas <file>` | — | sort a column of job titles: department, seniority, inferred buying role |
+| Command | What it does |
+|---|---|
+| `leadlint check <export> --mission m.json [--exclusions x.csv]` | revalidate an export: a verdict and a cause per line, QA workbook, file of the compliant lines only |
+| `leadlint preflight <export> --mission m.json [--exclusions x.csv]` | say only whether the mission may run, control by control |
+| `leadlint fingerprints --mission m.json [--exclusions x.csv]` | compute the fingerprints the mission memorises (strategy, search, filters, exclusion list) |
+| `leadlint personas <file>` | sort a column of job titles: department, seniority, inferred buying role |
 
-`--mission` is also accepted as `--moulinette`. Add `--json` to get the bilan on standard output, `--lignes` to add each line's verdict to it, `--diagnostic` to see the verdicts even when the preflight blocks (nothing deliverable is written).
+Add `--json` to get the bilan on standard output, `--lignes` to add each line's verdict to it, `--diagnostic` to see the verdicts even when the preflight blocks (nothing deliverable is written).
+
+**Older names still work**, as exact aliases (same output, same exit code), but `--help` no longer shows them: the commands `b2b`, `prevol` and `empreintes` (for `check`, `preflight` and `fingerprints`), and the options `--blacklist` and `--moulinette` (for `--exclusions` and `--mission`). A script or a prompt written for them keeps running.
 
 ## What it checks
 
@@ -60,7 +62,7 @@ Each line gets a verdict and **one main cause**: the control that decided it.
 On the 50-row example in [`skills/leadlint/exemples/`](skills/leadlint/exemples/) (all data is fictional):
 
 ```bash
-leadlint check export-exemple.csv --mission mission-esn-11-50-validee.json --blacklist exclusions-exemple.csv
+leadlint check export-exemple.csv --mission mission-esn-11-50-validee.json --exclusions exclusions-exemple.csv
 ```
 
 | | Lines |
@@ -80,9 +82,11 @@ Writing the JSON by hand is not the point. Build and validate the mission in the
 
 Verdicts (`Conforme`, `À vérifier`, `Rejeté`), the report lines, the JSON keys and the workbook labels are in French on purpose: the engine is shared with the French web page and a test checks the two give identical results, field by field. Agents read them fine; the command names and this documentation are in English.
 
+The texts say « liste d'exclusion », « signature », « colonnes de correspondance » and « contrôle avant lancement », and a test refuses any other word in what a person reads (labels, reasons, workbook, command-line output, `--help`). The JSON keys and ids keep their historical names (`prevol`, `blacklist`, `empreinte`, `pas_blackliste`…): they are the file format shared with the web page, not words.
+
 ## What it writes
 
-- `<export>-controle-qa.xlsx`: **Contrôle QA** (editable verdict, cause, reasons, links), **Audit moulinette** (every control on every line, raw and normalized value), **Résumé**.
+- `<export>-controle-qa.xlsx`: **Contrôle QA** (editable verdict, cause, reasons, links), **Contrôle leadlint** (every control on every line, raw and normalized value), **Résumé**.
 - `<export>-conformes.xlsx`: only the compliant lines, in the mission's columns.
 - With `--json`: the bilan on standard output, for the agent.
 
@@ -107,7 +111,7 @@ Verdicts (`Conforme`, `À vérifier`, `Rejeté`), the report lines, the JSON key
 python tests/test_leadlint.py
 ```
 
-Scenarios whose expected results are rendered by the web page's engine are replayed through the script: same verdicts, causes and fingerprints, field by field. The suite also runs the command line end to end (CSV, Excel, blocked preflight, diagnostic, booby-trapped cell), proves that each English command gives exactly the same output and exit code as its French alias, checks that an installed copy finds its matrices, and contains negative controls that fail if a deliberate deviation goes unseen.
+Scenarios whose expected results are rendered by the web page's engine are replayed through the script: same verdicts, causes and fingerprints, field by field. The suite also runs the command line end to end (CSV, Excel, blocked preflight, diagnostic, booby-trapped cell), proves that each older command and option gives exactly the same output and exit code as its current name, refuses any word of the old vocabulary in what a person reads, checks that an installed copy finds its matrices, and contains negative controls that fail if a deliberate deviation goes unseen.
 
 ## License
 

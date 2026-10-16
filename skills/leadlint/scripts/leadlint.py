@@ -2,25 +2,25 @@
 # -*- coding: utf-8 -*-
 """leadlint: a linter for B2B lead lists, built for AI agents. Local and deterministic.
 
-Four commands (the French names stay valid, as exact aliases):
+Four commands:
 
   personas      sorts a column of job titles with a matrix
                 (department, seniority, inferred buying role).
-  check         (alias b2b) revalidates a prospecting export against a mission:
+  check         revalidates a prospecting export against a mission:
                 rules, exclusion list, duplicates, preflight, QA workbook, bilan.
-  preflight     (alias prevol) says only whether the mission may run, control by control.
-  fingerprints  (alias empreintes) computes the fingerprints the mission memorises
+  preflight     says only whether the mission may run, control by control.
+  fingerprints  computes the fingerprints the mission memorises
                 (strategy, search, filters, exclusion list).
 
 Examples:
 
   leadlint personas contacts.xlsx
-  leadlint check export.csv --mission mission.json --blacklist exclusions.csv
+  leadlint check export.csv --mission mission.json --exclusions exclusions.csv
   leadlint check export.csv --mission mission.json --diagnostic --json
 
 The mission file is the one the web page saves (https://zerogravity.builders/outils/segmentation):
-a JSON configuration, or a full setup that contains it. `--moulinette` stays accepted as an
-alias of `--mission`. Nothing leaves the machine: no network call, no data sent.
+a JSON configuration, or a full setup that contains it. Nothing leaves the machine: no network
+call, no data sent.
 
 Exit codes: 0 done (both bilan invariants hold) · 2 preflight blocked (nothing is delivered) ·
 1 unreadable input or wrong bilan.
@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 ICI = Path(__file__).resolve().parent
 
 
@@ -451,8 +451,17 @@ DEFINITIONS: dict[str, tuple[str | None, str, str]] = {
     "source_email": ("sourceEmail", "Provenance de l'email", "contact"),
     "mobile_fr": ("mobile", "Mobile français 06/07", "contact"),
     "source_mobile": ("sourceMobile", "Provenance professionnelle du mobile", "contact"),
-    "blacklist": (None, "Entreprise absente de la blacklist", "exclusion"),
+    "blacklist": (None, "Entreprise absente de la liste d'exclusion", "exclusion"),
     "doublon": (None, "Contact unique", "qualite"),
+}
+
+# Ce que dit le classeur d'une règle : le nom de l'opérateur en français courant (jumeau de LIBELLES_OPERATEURS de regles.ts).
+# L'identifiant de l'opérateur, lui, ne change pas : c'est la clé du fichier de mission.
+LIBELLES_OPERATEURS = {
+    "est_dans": "est dans la liste", "contient_un": "contient au moins un", "ne_contient_aucun": "ne contient aucun",
+    "entre": "est compris entre", "present": "est renseigné", "email_professionnel": "est un email professionnel",
+    "mobile_francais": "est un mobile français 06/07", "provenance_professionnelle": "indique une provenance professionnelle",
+    "pas_blackliste": "n'est pas dans la liste d'exclusion", "unique": "n'est pas un doublon",
 }
 
 COLONNES_B2B_STANDARD = [
@@ -595,7 +604,7 @@ def charger_mission(chemin: Path) -> tuple[dict, dict]:
     return identite, migrer_configuration_b2b(configuration)
 
 
-# --------------------------------------------------------------------------- empreintes et prévol (jumeau de setups.ts et b2b.ts)
+# --------------------------------------------------------------------------- signatures et contrôle avant lancement (jumeau de setups.ts et b2b.ts)
 
 
 def empreinte_strategie(strategie: dict) -> str:
@@ -739,9 +748,9 @@ def controler_prevol(configuration: dict, candidats_charges: int, blacklist_char
     return [
         controle("strategie", "Stratégie critère par critère validée et inchangée", strategie_validee(configuration["strategie"])),
         controle("recherche_validee", "Recherche réelle validée avec capture, volume, échantillon et limites", recherche_validee(configuration)),
-        controle("configuration", "Règles, colonnes finales et mapping candidats complets", len(regles) > 0 and ids_valides and intervalles and listes and len(configuration["colonnesFinales"]) > 0 and mappings_complets),
-        controle("blacklist", "Blacklist chargée et mapping d'exclusion défini", blacklist_chargee > 0 and mapping_blacklist, blacklist_requise),
-        controle("empreinte", "Volume et empreinte de blacklist cohérents", blacklist_chargee > 0 and volume_conforme and empreinte_conforme, blacklist_requise),
+        controle("configuration", "Règles, colonnes finales et correspondance des colonnes du fichier candidats complètes", len(regles) > 0 and ids_valides and intervalles and listes and len(configuration["colonnesFinales"]) > 0 and mappings_complets),
+        controle("blacklist", "Liste d'exclusion chargée et colonnes de correspondance définies", blacklist_chargee > 0 and mapping_blacklist, blacklist_requise),
+        controle("empreinte", "Volume et signature de la liste d'exclusion cohérents", blacklist_chargee > 0 and volume_conforme and empreinte_conforme, blacklist_requise),
         controle("liste_pharow", "Bonne recherche et bonne liste d'exclusion Pharow renseignées", rogner(texte_js(pharow.get("nomRecherche"))) and rogner(texte_js(pharow.get("nomListeExclusion")))),
         controle("exclusion_pharow", "Exclusion confirmée active dans Pharow", vrai(pharow.get("exclusionConfirmeeLe"))),
         controle("export_source", "Export brut conservé et identifié dans le navigateur", export_conforme),
@@ -847,7 +856,7 @@ def _evaluer_valeur(regle: dict, champ: str | None, normalisee: Any, blacklist: 
     operateur = regle.get("operateur")
     texte = normaliser_texte(normalisee)
     if operateur == "pas_blackliste":
-        return (not blacklist, f"Entreprise présente dans la blacklist ({blacklist})" if blacklist else "Entreprise absente de la blacklist")
+        return (not blacklist, f"Entreprise présente dans la liste d'exclusion ({blacklist})" if blacklist else "Entreprise absente de la liste d'exclusion")
     if operateur == "unique":
         return (not doublon, f"Doublon de la ligne {doublon}" if doublon else "Contact unique")
     if operateur == "present":
@@ -975,7 +984,7 @@ def type_probleme(ligne: dict) -> str:
         return ""
     critere = evaluation["critereId"]
     if critere == "blacklist":
-        return "Blacklist"
+        return "Liste d'exclusion"
     if critere == "doublon":
         return "Doublon"
     if critere in ("poste", "obligatoire:poste"):
@@ -1180,6 +1189,7 @@ def _lien(valeur: Any) -> Any:
 def ecrire_classeur_b2b(chemin: Path, lignes: list[dict], configuration: dict, prevol: dict, mention: str) -> None:
     openpyxl, Alignment, Font, PatternFill, _, DataValidation, _, _ = _openpyxl()
     classeur = openpyxl.Workbook()
+    classeur.properties.creator = "leadlint"
     classeur.remove(classeur.active)
     mapping = configuration["mappingCandidats"]
     brute = lambda ligne, champ: ligne["source"].get(mapping[champ], "") if mapping.get(champ) else ligne["valeurs"].get(champ, "")  # noqa: E731
@@ -1210,27 +1220,27 @@ def ecrire_classeur_b2b(chemin: Path, lignes: list[dict], configuration: dict, p
         l["numeroLigne"], l["statut"], e["portee"], e["libelle"], e["importance"], e["statut"], e["colonneSource"],
         sur(e["valeurBrute"]), sur(e["valeurNormalisee"]), sur(e["raison"]),
     ] for l in lignes for e in l["evaluations"]]
-    _feuille(classeur, "Audit moulinette", "AuditMoulinette",
-             ["N° ligne source", "Statut moulinette", "Portée", "Critère", "Importance", "Résultat critère", "Colonne source", "Valeur brute", "Valeur normalisée", "Diagnostic"],
+    _feuille(classeur, "Contrôle leadlint", "ControleLeadlint",
+             ["N° ligne source", "Statut leadlint", "Portée", "Critère", "Importance", "Résultat critère", "Colonne source", "Valeur brute", "Valeur normalisée", "Diagnostic"],
              audit, [16, 20, 16, 32, 15, 20, 24, 30, 30, 48])
 
     bilan = bilan_b2b(lignes)
     resume = [
         ["Version du schéma", configuration.get("schemaVersion", 2)],
         ["Lignes analysées", bilan["total"]],
-        ["Conformes moulinette", bilan["conformes"]],
+        ["Conformes leadlint", bilan["conformes"]],
         ["À vérifier", bilan["a_verifier"]],
         ["Rejetées", bilan["rejetes"]],
         ["Contrôle effectué le", dt.datetime.now().replace(microsecond=0)],
-        ["Empreinte blacklist", texte_js(configuration["blacklist"].get("empreinte")) or "Non mémorisée"],
+        ["Signature de la liste d'exclusion", texte_js(configuration["blacklist"].get("empreinte")) or "Non mémorisée"],
         *[[f"Critère — {DEFINITIONS.get(r.get('critereId'), (None, r.get('critereId')))[1]}",
-           f"{r.get('operateur')} | {json.dumps(r.get('valeur'), ensure_ascii=False, separators=(',', ':'))} | {r.get('importance')} | absent={r.get('siAbsent')}"]
+           f"{LIBELLES_OPERATEURS.get(r.get('operateur'), r.get('operateur'))} | {json.dumps(r.get('valeur'), ensure_ascii=False, separators=(',', ':'))} | {r.get('importance')} | absent={r.get('siAbsent')}"]
           for r in configuration["regles"] if vrai(r.get("active"))],
-        ["Prévol", "autorisé" if prevol["autorise"] else f"BLOQUÉ — {', '.join(c['id'] for c in prevol['controles'] if c['bloquant'] and not c['valide'])}"],
+        ["Contrôle avant lancement", "autorisé" if prevol["autorise"] else f"BLOQUÉ — {' ; '.join(c['libelle'] for c in prevol['controles'] if c['bloquant'] and not c['valide'])}"],
         ["Nature du passage", mention],
         ["Outil", f"leadlint {VERSION}"],
     ]
-    feuille = _feuille(classeur, "Résumé", "ResumeMoulinette", ["Indicateur", "Valeur"], resume, [46, 90])
+    feuille = _feuille(classeur, "Résumé", "ResumeLeadlint", ["Indicateur", "Valeur"], resume, [46, 90])
     feuille["B7"].number_format = "yyyy-mm-dd hh:mm"
     classeur.save(chemin)
 
@@ -1238,6 +1248,7 @@ def ecrire_classeur_b2b(chemin: Path, lignes: list[dict], configuration: dict, p
 def ecrire_conformes_b2b(chemin: Path, lignes: list[dict], configuration: dict) -> None:
     openpyxl = _openpyxl()[0]
     classeur = openpyxl.Workbook()
+    classeur.properties.creator = "leadlint"
     classeur.remove(classeur.active)
     colonnes = configuration["colonnesFinales"]
     entetes = [c.get("libelle", c.get("champ")) for c in colonnes]
@@ -1272,7 +1283,7 @@ def _ecrire_sortie(donnees: dict, en_json: bool, texte: list[str]) -> None:
 
 
 def _charger_b2b(args) -> tuple[dict, dict, list[dict], list[dict], list[str]]:
-    identite, configuration = charger_mission(args.moulinette)
+    identite, configuration = charger_mission(args.mission)
     if configuration["mode"] != "revalidation_b2b":
         raise ErreurEntree("Cette mission est une matrice de personas : utilise la commande « personas ».")
     entetes, lignes = lire_tableau(args.export)
@@ -1280,8 +1291,8 @@ def _charger_b2b(args) -> tuple[dict, dict, list[dict], list[dict], list[str]]:
         raise ErreurEntree(f"{args.export.name} est vide.")
     configuration["mappingCandidats"] = completer_mapping(configuration["mappingCandidats"], entetes, ENTETES_CANDIDATS)
     blacklist: list[dict] = []
-    if args.blacklist:
-        entetes_bl, lignes_bl = lire_tableau(args.blacklist)
+    if args.exclusions:
+        entetes_bl, lignes_bl = lire_tableau(args.exclusions)
         configuration["mappingBlacklist"] = completer_mapping(configuration["mappingBlacklist"], entetes_bl, ENTETES_BLACKLIST)
         blacklist = vers_objets(entetes_bl, lignes_bl)
     return identite, configuration, vers_objets(entetes, lignes), blacklist, entetes
@@ -1300,13 +1311,13 @@ def _nom_mission(identite: dict, chemin: Path) -> str:
 def commande_b2b(args) -> int:
     identite, configuration, candidats, blacklist, _ = _charger_b2b(args)
     prevol = _prevol(configuration, candidats, blacklist)
-    nom = _nom_mission(identite, args.moulinette)
+    nom = _nom_mission(identite, args.mission)
     bloques = [c for c in prevol["controles"] if c["bloquant"] and not c["valide"]]
     if not prevol["autorise"] and not args.diagnostic:
         _ecrire_sortie(
             {"outil": "leadlint", "version": VERSION, "commande": "b2b", "mission": identite, "prevol": prevol, "livre": False},
             args.json,
-            [f"Moulinette « {nom} » — {args.export.name}", f"Prévol BLOQUÉ : {len(bloques)} contrôle(s) à lever, rien n'est livré."]
+            [f"leadlint « {nom} » — {args.export.name}", f"Contrôle avant lancement BLOQUÉ : {len(bloques)} contrôle(s) à lever, rien n'est livré."]
             + [f"  ✗ {c['libelle']}" for c in bloques]
             + ["Pour voir les verdicts sans rien livrer : ajoute --diagnostic."],
         )
@@ -1318,7 +1329,7 @@ def commande_b2b(args) -> int:
     diagnostic = not prevol["autorise"]
     suffixe = "-diagnostic" if diagnostic else ""
     fichiers = {"controle_qa": str(dossier / f"{_base(args.export)}{suffixe}-controle-qa.xlsx")}
-    mention = "Diagnostic non livrable (prévol non passé)" if diagnostic else "Passage livrable (prévol passé)"
+    mention = "Diagnostic non livrable (contrôle avant lancement non passé)" if diagnostic else "Passage livrable (contrôle avant lancement passé)"
     ecrire_classeur_b2b(Path(fichiers["controle_qa"]), lignes, configuration, prevol, mention)
     if not diagnostic:
         fichiers["conformes"] = str(dossier / f"{_base(args.export)}-conformes.xlsx")
@@ -1331,8 +1342,8 @@ def commande_b2b(args) -> int:
         sortie["lignes"] = [{"numeroLigne": l["numeroLigne"], "statut": l["statut"], "cause": type_probleme(l), "raisons": l["raisons"]} for l in lignes]
     causes = lambda statut: " · ".join(f"{cause} {n}" for cause, n in bilan["causes"][statut].items()) or "aucune"  # noqa: E731
     _ecrire_sortie(sortie, args.json, [
-        f"Moulinette « {nom} » — {args.export.name}",
-        "Prévol : autorisé" if not diagnostic else f"Prévol non passé ({len(bloques)} contrôle(s)) : DIAGNOSTIC NON LIVRABLE",
+        f"leadlint « {nom} » — {args.export.name}",
+        "Contrôle avant lancement : autorisé" if not diagnostic else f"Contrôle avant lancement non passé ({len(bloques)} contrôle(s)) : DIAGNOSTIC NON LIVRABLE",
         f"Lignes {bilan['total']} · conformes {bilan['conformes']} · à vérifier {bilan['a_verifier']} · rejetées {bilan['rejetes']}",
         f"Rejetées, par cause : {causes('Rejeté')}",
         f"À vérifier, par cause : {causes('À vérifier')}",
@@ -1348,29 +1359,36 @@ def commande_prevol(args) -> int:
     _ecrire_sortie(
         {"outil": "leadlint", "version": VERSION, "commande": "prevol", "mission": identite, "prevol": prevol},
         args.json,
-        [f"Prévol « {_nom_mission(identite, args.moulinette)} » : {'autorisé' if prevol['autorise'] else 'BLOQUÉ'}"]
+        [f"Contrôle avant lancement « {_nom_mission(identite, args.mission)} » : {'autorisé' if prevol['autorise'] else 'BLOQUÉ'}"]
         + [f"  {'✓' if c['valide'] else '✗' if c['bloquant'] else '·'} {c['libelle']}" for c in prevol["controles"]],
     )
     return 0 if prevol["autorise"] else 2
 
 
+# Ce que la ligne de commande écrit pour chaque valeur de `fingerprints` (les clés du JSON, elles, ne changent pas).
+ETIQUETTES_SIGNATURES = {
+    "strategie": "Signature de la stratégie", "recherche": "Signature de la recherche", "filtres": "Signature des filtres",
+    "erreurs_strategie": "Erreurs de la stratégie", "blacklist": "Signature de la liste d'exclusion", "blacklist_volume": "Lignes de la liste d'exclusion",
+}
+
+
 def commande_empreintes(args) -> int:
-    identite, configuration = charger_mission(args.moulinette)
+    identite, configuration = charger_mission(args.mission)
     if configuration["mode"] != "revalidation_b2b":
-        raise ErreurEntree("Les empreintes ne concernent qu'une mission B2B.")
+        raise ErreurEntree("Les signatures ne concernent qu'une mission B2B.")
     empreintes = {
         "strategie": empreinte_strategie(configuration["strategie"]),
         "recherche": empreinte_recherche(configuration),
         "filtres": empreinte_filtres(configuration["pharow"]["filtres"]),
         "erreurs_strategie": erreurs_strategie(configuration["strategie"]),
     }
-    if args.blacklist:
-        entetes, lignes = lire_tableau(args.blacklist)
+    if args.exclusions:
+        entetes, lignes = lire_tableau(args.exclusions)
         mapping = completer_mapping(configuration["mappingBlacklist"], entetes, ENTETES_BLACKLIST)
         objets = vers_objets(entetes, lignes)
         empreintes.update({"blacklist": empreinte_blacklist(objets, mapping), "blacklist_volume": len(objets)})
     _ecrire_sortie({"outil": "leadlint", "version": VERSION, "commande": "empreintes", "mission": identite, **empreintes}, args.json,
-                   [f"{cle} : {valeur}" for cle, valeur in empreintes.items()])
+                   [f"{ETIQUETTES_SIGNATURES[cle]} : {(' | '.join(valeur) or 'aucune') if cle == 'erreurs_strategie' else valeur}" for cle, valeur in empreintes.items()])
     return 0
 
 
@@ -1378,7 +1396,7 @@ def commande_personas(args) -> int:
     if args.matrice:
         _, configuration = charger_mission(args.matrice)
         if configuration["mode"] != "persona":
-            raise ErreurEntree("Ce fichier est une mission B2B : utilise la commande « b2b ».")
+            raise ErreurEntree("Ce fichier est une mission B2B : utilise la commande « check ».")
         matrice, multi = configuration["matrice"], args.multi or configuration["multiCategories"]
     else:
         matrice, multi = json.loads(MATRICE_DEFAUT.read_text(encoding="utf-8")), args.multi
@@ -1420,12 +1438,45 @@ def commande_personas(args) -> int:
     return 0
 
 
+class _FormateurAide(argparse.RawDescriptionHelpFormatter):
+    """Le formateur d'origine, qui n'annonce que le premier nom d'une option longue.
+
+    Les anciens noms (`--moulinette` pour `--mission`, `--blacklist` pour `--exclusions`) restent acceptés mais ne
+    figurent plus dans l'aide : elle ne parle que de liste d'exclusion.
+    """
+
+    def _format_action_invocation(self, action):
+        noms = action.option_strings
+        action.option_strings = noms[:1] if noms and noms[0].startswith("--") else noms
+        try:
+            return super()._format_action_invocation(action)
+        finally:
+            action.option_strings = noms
+
+
+class _Parseur(argparse.ArgumentParser):
+    """Un message d'erreur d'usage ne cite pas non plus les anciens noms (`--mission/--moulinette`, `b2b`, `prevol`, `empreintes`)."""
+
+    def error(self, message):
+        message = re.sub(r"/--(?:moulinette|blacklist)\b", "", message)
+        message = re.sub(r"\(choose from [^)]*\)", "(choose from personas, check, preflight, fingerprints)", message)
+        super().error(message)
+
+
+def _option_mission(commande) -> None:
+    commande.add_argument("--mission", "--moulinette", dest="mission", metavar="MISSION", type=Path, required=True, help="mission JSON file")
+
+
+def _option_exclusions(commande, aide: str) -> None:
+    commande.add_argument("--exclusions", "--blacklist", dest="exclusions", metavar="FILE", type=Path, help=aide)
+
+
 def construire_parseur() -> argparse.ArgumentParser:
-    parseur = argparse.ArgumentParser(prog="leadlint", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parseur = _Parseur(prog="leadlint", description=__doc__, formatter_class=_FormateurAide)
     parseur.add_argument("--version", action="version", version=f"leadlint {VERSION}")
     sous = parseur.add_subparsers(dest="commande", required=True, metavar="{personas,check,preflight,fingerprints}")
 
-    personas = sous.add_parser("personas", help="sort a column of job titles")
+    personas = sous.add_parser("personas", help="sort a column of job titles", formatter_class=_FormateurAide)
     personas.add_argument("entree", type=Path, help="file .xlsx, .xlsm or .csv")
     personas.add_argument("-m", "--matrice", type=Path, help="JSON matrix or \"persona\" mission (default: the generic matrix)")
     personas.add_argument("-o", "--sortie", type=Path, help="output file (default: <input>-qualifie.xlsx)")
@@ -1434,27 +1485,30 @@ def construire_parseur() -> argparse.ArgumentParser:
     personas.add_argument("--json", action="store_true", help="JSON bilan on standard output (for an agent)")
     personas.set_defaults(action=commande_personas)
 
-    # Noms anglais d'abord, noms français en alias exact : même action, mêmes options, mêmes sorties.
-    for nom, alias, aide, action in (
+    # Noms anglais d'abord. Les anciens noms français (b2b, prevol, empreintes) construisent le même parseur, sans texte
+    # d'aide : mêmes options, même action, mêmes sorties, acceptés comme avant, mais absents de `--help`.
+    for nom, ancien, aide, action in (
         ("check", "b2b", "revalidate an export against a mission", commande_b2b),
         ("preflight", "prevol", "say only whether the mission may run", commande_prevol),
     ):
-        commande = sous.add_parser(nom, aliases=[alias], help=aide)
-        commande.add_argument("export", type=Path, help="candidates export .xlsx, .xlsm or .csv")
-        commande.add_argument("--mission", "--moulinette", dest="moulinette", metavar="MISSION", type=Path, required=True, help="mission JSON file (--moulinette is an alias)")
-        commande.add_argument("--blacklist", type=Path, help="exclusion list .xlsx or .csv")
-        commande.add_argument("--json", action="store_true", help="JSON bilan on standard output (for an agent)")
-        if nom == "check":
-            commande.add_argument("-o", "--sortie", type=Path, help="output folder (default: the export's folder)")
-            commande.add_argument("--diagnostic", action="store_true", help="return the verdicts even if the preflight blocks; nothing deliverable")
-            commande.add_argument("--lignes", action="store_true", help="add each line's verdict to the JSON bilan")
-        commande.set_defaults(action=action)
+        for nom_commande, aide_commande in ((nom, aide), (ancien, None)):
+            commande = sous.add_parser(nom_commande, formatter_class=_FormateurAide, **({"help": aide_commande} if aide_commande else {}))
+            commande.add_argument("export", type=Path, help="candidates export .xlsx, .xlsm or .csv")
+            _option_mission(commande)
+            _option_exclusions(commande, "exclusion list .xlsx or .csv")
+            commande.add_argument("--json", action="store_true", help="JSON bilan on standard output (for an agent)")
+            if nom == "check":
+                commande.add_argument("-o", "--sortie", type=Path, help="output folder (default: the export's folder)")
+                commande.add_argument("--diagnostic", action="store_true", help="return the verdicts even if the preflight blocks; nothing deliverable")
+                commande.add_argument("--lignes", action="store_true", help="add each line's verdict to the JSON bilan")
+            commande.set_defaults(action=action)
 
-    empreintes = sous.add_parser("fingerprints", aliases=["empreintes"], help="compute the fingerprints the mission memorises")
-    empreintes.add_argument("--mission", "--moulinette", dest="moulinette", metavar="MISSION", type=Path, required=True, help="mission JSON file (--moulinette is an alias)")
-    empreintes.add_argument("--blacklist", type=Path, help="exclusion list, for its fingerprint and volume")
-    empreintes.add_argument("--json", action="store_true", help="JSON output")
-    empreintes.set_defaults(action=commande_empreintes)
+    for nom_commande, aide_commande in (("fingerprints", "compute the fingerprints the mission memorises"), ("empreintes", None)):
+        empreintes = sous.add_parser(nom_commande, formatter_class=_FormateurAide, **({"help": aide_commande} if aide_commande else {}))
+        _option_mission(empreintes)
+        _option_exclusions(empreintes, "exclusion list, for its fingerprint and volume")
+        empreintes.add_argument("--json", action="store_true", help="JSON output")
+        empreintes.set_defaults(action=commande_empreintes)
     return parseur
 
 

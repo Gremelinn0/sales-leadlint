@@ -1,7 +1,7 @@
 {
   "empreintes": {
-    "strategie": "fnv1a-22e1abfd",
-    "recherche": "fnv1a-776cf260",
+    "strategie": "fnv1a-c7b1871e",
+    "recherche": "fnv1a-1ccc16fb",
     "filtres": "fnv1a-db830f65",
     "blacklist": "fnv1a-951be802"
   },
@@ -22,19 +22,19 @@
       },
       {
         "id": "configuration",
-        "libelle": "Règles, colonnes finales et mapping candidats complets",
+        "libelle": "Règles, colonnes finales et correspondance des colonnes du fichier candidats complètes",
         "valide": true,
         "bloquant": true
       },
       {
         "id": "blacklist",
-        "libelle": "Blacklist chargée et mapping d'exclusion défini",
+        "libelle": "Liste d'exclusion chargée et colonnes de correspondance définies",
         "valide": true,
         "bloquant": true
       },
       {
         "id": "empreinte",
-        "libelle": "Volume et empreinte de blacklist cohérents",
+        "libelle": "Volume et signature de la liste d'exclusion cohérents",
         "valide": true,
         "bloquant": true
       },
@@ -347,14 +347,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -642,14 +642,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -935,14 +935,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -1228,14 +1228,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -1523,14 +1523,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -1818,14 +1818,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -2113,14 +2113,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -2406,14 +2406,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -2433,9 +2433,9 @@
       "numeroLigne": 10,
       "statut": "Rejeté",
       "cause": "blacklist",
-      "typeProbleme": "Blacklist",
+      "typeProbleme": "Liste d'exclusion",
       "raisons": [
-        "Entreprise absente de la blacklist : Entreprise présente dans la blacklist (nom normalisé)"
+        "Entreprise absente de la liste d'exclusion : Entreprise présente dans la liste d'exclusion (nom normalisé)"
       ],
       "valeurs": {
         "nomComplet": "Camille Exemple 9",
@@ -2701,14 +2701,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Échoué",
           "valeurBrute": "nom normalisé",
           "valeurNormalisee": "nom normalisé",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise présente dans la blacklist (nom normalisé)"
+          "raison": "Entreprise présente dans la liste d'exclusion (nom normalisé)"
         },
         {
           "regleId": "r-doublon-unique",
@@ -2728,9 +2728,9 @@
       "numeroLigne": 11,
       "statut": "Rejeté",
       "cause": "blacklist",
-      "typeProbleme": "Blacklist",
+      "typeProbleme": "Liste d'exclusion",
       "raisons": [
-        "Entreprise absente de la blacklist : Entreprise présente dans la blacklist (URL LinkedIn entreprise)"
+        "Entreprise absente de la liste d'exclusion : Entreprise présente dans la liste d'exclusion (URL LinkedIn entreprise)"
       ],
       "valeurs": {
         "nomComplet": "Camille Exemple 10",
@@ -2996,14 +2996,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Échoué",
           "valeurBrute": "URL LinkedIn entreprise",
           "valeurNormalisee": "URL LinkedIn entreprise",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise présente dans la blacklist (URL LinkedIn entreprise)"
+          "raison": "Entreprise présente dans la liste d'exclusion (URL LinkedIn entreprise)"
         },
         {
           "regleId": "r-doublon-unique",
@@ -3023,9 +3023,9 @@
       "numeroLigne": 12,
       "statut": "Rejeté",
       "cause": "blacklist",
-      "typeProbleme": "Blacklist",
+      "typeProbleme": "Liste d'exclusion",
       "raisons": [
-        "Entreprise absente de la blacklist : Entreprise présente dans la blacklist (domaine)"
+        "Entreprise absente de la liste d'exclusion : Entreprise présente dans la liste d'exclusion (domaine)"
       ],
       "valeurs": {
         "nomComplet": "Camille Exemple 11",
@@ -3291,14 +3291,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Échoué",
           "valeurBrute": "domaine",
           "valeurNormalisee": "domaine",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise présente dans la blacklist (domaine)"
+          "raison": "Entreprise présente dans la liste d'exclusion (domaine)"
         },
         {
           "regleId": "r-doublon-unique",
@@ -3318,9 +3318,9 @@
       "numeroLigne": 13,
       "statut": "Rejeté",
       "cause": "blacklist",
-      "typeProbleme": "Blacklist",
+      "typeProbleme": "Liste d'exclusion",
       "raisons": [
-        "Entreprise absente de la blacklist : Entreprise présente dans la blacklist (SIREN)"
+        "Entreprise absente de la liste d'exclusion : Entreprise présente dans la liste d'exclusion (SIREN)"
       ],
       "valeurs": {
         "nomComplet": "Camille Exemple 12",
@@ -3586,14 +3586,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Échoué",
           "valeurBrute": "SIREN",
           "valeurNormalisee": "SIREN",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise présente dans la blacklist (SIREN)"
+          "raison": "Entreprise présente dans la liste d'exclusion (SIREN)"
         },
         {
           "regleId": "r-doublon-unique",
@@ -3881,14 +3881,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -4176,14 +4176,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -4471,14 +4471,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -4766,14 +4766,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -5061,14 +5061,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -5354,14 +5354,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -5649,14 +5649,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -5942,14 +5942,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -6235,14 +6235,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -6530,14 +6530,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -6825,14 +6825,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -7118,14 +7118,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -7413,14 +7413,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -7706,14 +7706,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -8001,14 +8001,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -8296,14 +8296,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -8589,14 +8589,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -8884,14 +8884,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -9179,14 +9179,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -9474,14 +9474,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -9768,14 +9768,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -10063,14 +10063,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -10358,14 +10358,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -10652,14 +10652,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -10947,14 +10947,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -11240,14 +11240,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -11535,14 +11535,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -11830,14 +11830,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -12124,14 +12124,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -12151,10 +12151,10 @@
       "numeroLigne": 43,
       "statut": "Rejeté",
       "cause": "blacklist",
-      "typeProbleme": "Blacklist",
+      "typeProbleme": "Liste d'exclusion",
       "raisons": [
         "Provenance de l'email : Donnée absente — politique : verifier",
-        "Entreprise absente de la blacklist : Entreprise présente dans la blacklist (nom normalisé)"
+        "Entreprise absente de la liste d'exclusion : Entreprise présente dans la liste d'exclusion (nom normalisé)"
       ],
       "valeurs": {
         "nomComplet": "Camille Exemple 42",
@@ -12419,14 +12419,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Échoué",
           "valeurBrute": "nom normalisé",
           "valeurNormalisee": "nom normalisé",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise présente dans la blacklist (nom normalisé)"
+          "raison": "Entreprise présente dans la liste d'exclusion (nom normalisé)"
         },
         {
           "regleId": "r-doublon-unique",
@@ -12712,14 +12712,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -13005,14 +13005,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -13299,14 +13299,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -13593,14 +13593,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -13888,14 +13888,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -14183,14 +14183,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -14476,14 +14476,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",
@@ -14769,14 +14769,14 @@
         {
           "regleId": "r-blacklist-pas_blackliste",
           "critereId": "blacklist",
-          "libelle": "Entreprise absente de la blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
           "portee": "exclusion",
           "importance": "bloquant",
           "statut": "Réussi",
           "valeurBrute": "absent",
           "valeurNormalisee": "absent",
           "colonneSource": "Contrôle calculé",
-          "raison": "Entreprise absente de la blacklist"
+          "raison": "Entreprise absente de la liste d'exclusion"
         },
         {
           "regleId": "r-doublon-unique",

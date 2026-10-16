@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "A linter for B2B lead lists, built for AI agents. Local, free, deterministic.",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {

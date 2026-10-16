@@ -1,6 +1,6 @@
 # The mission file
 
-A mission = one JSON file. The JSON keys and the criterion ids (`regles`, `critereId`, `bloquant`, `pas_blackliste`…) are French on purpose: they are the schema shared with the web page, which writes the same file, so they are not translated below.
+A mission = one JSON file. The JSON keys and the criterion ids (`regles`, `critereId`, `bloquant`, `pas_blackliste`…) are French on purpose: they are the schema shared with the web page, which writes the same file, so they are not translated below. A few keep a historical name (`blacklist`, `mappingBlacklist`, `empreinte`, `pas_blackliste`): they are the file format, not words. In the texts a person reads, the same things are called the exclusion list, the column matching and the signature (fingerprint).
 
 The script accepts three shapes: a full setup (`{ "client", "mission", "configuration": {…} }`), a database row (same shape), or the `configuration` alone. An old configuration (before schema 2, with a `criteres` block) is migrated when read, as in the web page.
 
@@ -11,8 +11,8 @@ The script accepts three shapes: a full setup (`{ "client", "mission", "configur
 | `regles` | the controls applied to every line (see below) |
 | `champsObligatoires` | fields that must be filled in, otherwise the line is rejected |
 | `colonnesFinales` | `[{ "champ", "libelle" }]`: columns and order of the compliant-lines file |
-| `mappingCandidats` | `{ field: "Export header" }`; whatever is missing is guessed from the headers |
-| `mappingBlacklist` | same for the exclusion list (`entreprise`, `linkedinEntreprise`, `siteEntreprise`, `siren`) |
+| `mappingCandidats` | column matching of the export: `{ field: "Export header" }`; whatever is missing is guessed from the headers |
+| `mappingBlacklist` | column matching of the exclusion list (`entreprise`, `linkedinEntreprise`, `siteEntreprise`, `siren`) |
 | `blacklist` | reference of the exclusion list: `obligatoire`, `nom`, `volumeAttendu`, `empreinte`, `miseAJourLe` |
 | `strategie` | the validated search strategy: `lignes`, `limites`, `valideeLe`, `empreinteValidee` |
 | `pharow` | the real search at the data supplier: names, filters, proofs and dates (see the preflight) |

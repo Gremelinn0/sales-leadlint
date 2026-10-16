@@ -1,12 +1,12 @@
 {
   "name": "leadlint",
   "description": "A linter for B2B lead lists, built for AI agents: sort job titles into personas (department, seniority, buying role) and revalidate a prospecting export against a mission's rules (company target, job title, professional email and mobile, exclusion list, duplicates), with a preflight, a QA workbook and a numbered bilan. A local Python script: no data leaves the machine.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": {
     "name": "Florent Maisoncelle"
   },
   "homepage": "https://github.com/Gremelinn0/sales-leadlint",
   "repository": "https://github.com/Gremelinn0/sales-leadlint",
   "license": "MIT",
-  "keywords": ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "blacklist", "deduplication", "personas", "outbound", "ai-agents"]
+  "keywords": ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "exclusion-list", "deduplication", "personas", "outbound", "ai-agents"]
 }
