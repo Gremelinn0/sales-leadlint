@@ -5,7 +5,7 @@ description: "Quand une base de contacts ou un export de prospection B2B doit ê
 
 # La moulinette B2B
 
-Un script, `scripts/moulinette.py`, qui fait deux choses sur un fichier de contacts (.xlsx, .xlsm, .csv) :
+Un script Python local qui fait deux choses sur un fichier de contacts (Excel ou CSV), sans qu'aucune donnée ne quitte la machine. Il vit dans `scripts/moulinette.py` :
 
 1. **`personas`** : classe chaque intitulé de poste (département, séniorité, rôle d'achat déduit) selon une matrice de mots-clés.
 2. **`b2b`** : revalide un export de prospection selon la **moulinette de la mission** (un fichier JSON) : chaque ligne sort `Conforme`, `À vérifier` ou `Rejeté`, avec une seule cause principale et le détail de chaque contrôle.
