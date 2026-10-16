@@ -1,0 +1,61 @@
+{
+  "regles": [
+    {
+      "critereId": "pays",
+      "operateur": "est_dans",
+      "valeur": [
+        "France"
+      ],
+      "importance": "bloquant",
+      "siAbsent": "rejeter"
+    },
+    {
+      "critereId": "employes_visibles",
+      "operateur": "entre",
+      "valeur": {
+        "min": 10,
+        "max": 50
+      },
+      "importance": "bloquant",
+      "siAbsent": "rejeter"
+    },
+    {
+      "critereId": "email_pro",
+      "operateur": "email_professionnel",
+      "valeur": true,
+      "importance": "bloquant",
+      "siAbsent": "rejeter"
+    },
+    {
+      "critereId": "source_mobile",
+      "operateur": "provenance_professionnelle",
+      "valeur": true,
+      "importance": "verification",
+      "siAbsent": "verifier"
+    },
+    {
+      "critereId": "blacklist",
+      "operateur": "pas_blackliste",
+      "valeur": true,
+      "importance": "bloquant",
+      "siAbsent": "rejeter"
+    },
+    {
+      "critereId": "doublon",
+      "operateur": "unique",
+      "valeur": true,
+      "importance": "bloquant",
+      "siAbsent": "rejeter"
+    }
+  ],
+  "statuts": [
+    "Conforme",
+    "Rejeté",
+    "Conforme",
+    "Conforme",
+    "Rejeté",
+    "Rejeté",
+    "Rejeté",
+    "Conforme"
+  ]
+}

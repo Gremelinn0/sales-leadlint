@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "nom": "Matrice d'origine — efficacité énergétique",
+  "axes": [
+    {
+      "id": "categorie",
+      "libelle": "Catégorie",
+      "regles": [
+        {
+          "categorie": "RSE",
+          "priorite": 1,
+          "motsCles": [
+            "rse",
+            "environnement",
+            "durable",
+            "écologie",
+            "DD"
+          ]
+        },
+        {
+          "categorie": "Énergie",
+          "priorite": 2,
+          "motsCles": [
+            "énergie",
+            "CVC",
+            "efficacité énergétique",
+            "thermique",
+            "power"
+          ]
+        },
+        {
+          "categorie": "Achat",
+          "priorite": 3,
+          "motsCles": [
+            "acheteur",
+            "achat",
+            "approvisionnement",
+            "procurement"
+          ]
+        },
+        {
+          "categorie": "Finance",
+          "priorite": 4,
+          "motsCles": [
+            "comptable",
+            "trésorier",
+            "investissement",
+            "budget",
+            "audit"
+          ]
+        },
+        {
+          "categorie": "Direction",
+          "priorite": 5,
+          "motsCles": [
+            "directeur",
+            "CEO",
+            "fondateur",
+            "président",
+            "manager"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seniorite",
+      "libelle": "Séniorité",
+      "regles": [
+        {
+          "categorie": "Founder",
+          "priorite": 1,
+          "motsCles": [
+            "fondateur",
+            "fondatrice",
+            "co-founder"
+          ]
+        },
+        {
+          "categorie": "C-Level",
+          "priorite": 2,
+          "motsCles": [
+            "cto",
+            "cmo",
+            "cfo",
+            "cio",
+            "daf",
+            "dsi",
+            "evp"
+          ]
+        },
+        {
+          "categorie": "Director",
+          "priorite": 3,
+          "motsCles": [
+            "directeur",
+            "directrice",
+            "dir"
+          ]
+        },
+        {
+          "categorie": "Head",
+          "priorite": 4,
+          "motsCles": [
+            "head"
+          ]
+        },
+        {
+          "categorie": "Manager",
+          "priorite": 5,
+          "motsCles": [
+            "manager",
+            "responsable"
+          ]
+        },
+        {
+          "categorie": "Lead",
+          "priorite": 6,
+          "motsCles": [
+            "lead",
+            "chargé"
+          ]
+        },
+        {
+          "categorie": "Contributor",
+          "priorite": 7,
+          "motsCles": [
+            "ingénieur",
+            "analyste",
+            "acheteur",
+            "consultant"
+          ]
+        }
+      ]
+    }
+  ],
+  "derives": [
+    {
+      "id": "buyerRole",
+      "libelle": "Buyer Role",
+      "depuis": "seniorite",
+      "table": {
+        "Founder": "Oui",
+        "C-Level": "Oui",
+        "Director": "Oui",
+        "Head": "Oui",
+        "Manager": "Oui",
+        "Lead": "Non",
+        "Contributor": "Non"
+      },
+      "defaut": ""
+    }
+  ]
+}

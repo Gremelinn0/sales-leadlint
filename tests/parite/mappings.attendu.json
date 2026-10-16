@@ -1,0 +1,82 @@
+[
+  {
+    "entetes": [
+      "Full Name",
+      "Company",
+      "Job Title",
+      "Work Email",
+      "Code NAF"
+    ],
+    "candidats": {
+      "nomComplet": "Full Name",
+      "entreprise": "Company",
+      "poste": "Job Title",
+      "emailProfessionnel": "Work Email",
+      "codeNaf": "Code NAF"
+    },
+    "blacklist": {
+      "entreprise": "Company"
+    }
+  },
+  {
+    "entetes": [
+      "Nom complet",
+      "Entreprise",
+      "Poste",
+      "LinkedIn profil",
+      "Catégorie LinkedIn (11-50)",
+      "Nombre d'employés visibles",
+      "Email professionnel",
+      "Provenance de l'email",
+      "Mobile obligatoire (06/07)",
+      "Provenance professionnelle du mobile"
+    ],
+    "candidats": {
+      "nomComplet": "Nom complet",
+      "entreprise": "Entreprise",
+      "poste": "Poste",
+      "linkedinProfil": "LinkedIn profil",
+      "categorieLinkedIn": "Catégorie LinkedIn (11-50)",
+      "employesVisibles": "Nombre d'employés visibles",
+      "emailProfessionnel": "Email professionnel",
+      "sourceEmail": "Provenance de l'email",
+      "mobile": "Mobile obligatoire (06/07)",
+      "sourceMobile": "Provenance professionnelle du mobile"
+    },
+    "blacklist": {
+      "entreprise": "Entreprise"
+    }
+  },
+  {
+    "entetes": [
+      "Company",
+      "Company Website",
+      "SIREN",
+      "company linkedin url"
+    ],
+    "candidats": {
+      "entreprise": "Company",
+      "linkedinEntreprise": "company linkedin url",
+      "siteEntreprise": "Company Website",
+      "siren": "SIREN"
+    },
+    "blacklist": {
+      "entreprise": "Company",
+      "linkedinEntreprise": "company linkedin url",
+      "siteEntreprise": "Company Website",
+      "siren": "SIREN"
+    }
+  },
+  {
+    "entetes": [
+      "email",
+      "Email",
+      "Téléphone"
+    ],
+    "candidats": {
+      "emailProfessionnel": "Email",
+      "mobile": "Téléphone"
+    },
+    "blacklist": {}
+  }
+]

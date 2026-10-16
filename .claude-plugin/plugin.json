@@ -1,0 +1,12 @@
+{
+  "name": "moulinette-b2b",
+  "description": "La moulinette B2B : requalifier une base de contacts par personas (département, séniorité, rôle d'achat) et revalider un export de prospection selon les règles d'une mission (cible, poste, email et mobile pro, liste d'exclusion, doublons), avec un contrôle avant lancement, un classeur de contrôle et un bilan chiffré. Un script Python local, aucune donnée ne sort de la machine.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Florent Maisoncelle"
+  },
+  "homepage": "https://github.com/Gremelinn0/sales-moulinette-b2b",
+  "repository": "https://github.com/Gremelinn0/sales-moulinette-b2b",
+  "license": "MIT",
+  "keywords": ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "blacklist", "deduplication", "personas", "outbound"]
+}

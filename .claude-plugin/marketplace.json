@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "moulinette-b2b",
+  "owner": {
+    "name": "Florent Maisoncelle"
+  },
+  "metadata": {
+    "description": "Requalifier et revalider une base de contacts B2B, en local.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "moulinette-b2b",
+      "source": "./",
+      "description": "Trier des intitulés de poste en personas, et revalider un export de prospection selon les règles d'une mission : verdict et cause par ligne, liste d'exclusion, doublons, prévol, classeur de contrôle et bilan pour agent.",
+      "category": "sales"
+    }
+  ]
+}

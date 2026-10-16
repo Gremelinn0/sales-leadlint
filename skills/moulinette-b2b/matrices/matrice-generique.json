@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "nom": "Départements — générique BtoB",
+  "axes": [
+    {
+      "id": "categorie",
+      "libelle": "Département",
+      "regles": [
+        {
+          "categorie": "Founders",
+          "priorite": 1,
+          "motsCles": [
+            "CEO",
+            "fondateur",
+            "fondatrice",
+            "co-founder",
+            "président",
+            "directeur général",
+            "directrice générale",
+            "DG",
+            "gérant",
+            "gérante",
+            "managing director"
+          ]
+        },
+        {
+          "categorie": "Product",
+          "priorite": 2,
+          "motsCles": [
+            "produit",
+            "product owner",
+            "product manager"
+          ]
+        },
+        {
+          "categorie": "Customer Success",
+          "priorite": 3,
+          "motsCles": [
+            "customer success",
+            "support",
+            "relation client"
+          ]
+        },
+        {
+          "categorie": "Purchase / Procurement",
+          "priorite": 4,
+          "motsCles": [
+            "achat",
+            "approvisionnement",
+            "procurement",
+            "acheteur"
+          ]
+        },
+        {
+          "categorie": "Training & Development",
+          "priorite": 5,
+          "motsCles": [
+            "formation",
+            "développement des compétences"
+          ]
+        },
+        {
+          "categorie": "Legal",
+          "priorite": 6,
+          "motsCles": [
+            "juridique",
+            "légal"
+          ]
+        },
+        {
+          "categorie": "HR",
+          "priorite": 7,
+          "motsCles": [
+            "RH",
+            "ressources humaines",
+            "talent",
+            "recrutement"
+          ]
+        },
+        {
+          "categorie": "IT",
+          "priorite": 8,
+          "motsCles": [
+            "informatique",
+            "IT",
+            "DSI",
+            "systèmes",
+            "technique"
+          ]
+        },
+        {
+          "categorie": "Finance / Admin",
+          "priorite": 9,
+          "motsCles": [
+            "finance",
+            "financier",
+            "financière",
+            "comptable",
+            "comptabilité",
+            "trésorier",
+            "trésorerie",
+            "contrôle de gestion",
+            "admin",
+            "budget",
+            "DAF"
+          ]
+        },
+        {
+          "categorie": "Operations",
+          "priorite": 10,
+          "motsCles": [
+            "opérations",
+            "exploitation",
+            "logistique",
+            "supply chain"
+          ]
+        },
+        {
+          "categorie": "Marketing",
+          "priorite": 11,
+          "motsCles": [
+            "marketing",
+            "communication",
+            "publicité",
+            "growth",
+            "acquisition"
+          ]
+        },
+        {
+          "categorie": "Sales",
+          "priorite": 12,
+          "motsCles": [
+            "commercial",
+            "ventes",
+            "business developer",
+            "account",
+            "sales"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seniorite",
+      "libelle": "Séniorité",
+      "regles": [
+        {
+          "categorie": "Founder",
+          "priorite": 1,
+          "motsCles": [
+            "fondateur",
+            "fondatrice",
+            "co-founder"
+          ]
+        },
+        {
+          "categorie": "C-Level",
+          "priorite": 2,
+          "motsCles": [
+            "cto",
+            "cmo",
+            "cfo",
+            "cio",
+            "ceo",
+            "daf",
+            "dsi",
+            "evp"
+          ]
+        },
+        {
+          "categorie": "Director",
+          "priorite": 3,
+          "motsCles": [
+            "directeur",
+            "directrice",
+            "dir",
+            "président"
+          ]
+        },
+        {
+          "categorie": "Head",
+          "priorite": 4,
+          "motsCles": [
+            "head"
+          ]
+        },
+        {
+          "categorie": "Manager",
+          "priorite": 5,
+          "motsCles": [
+            "manager",
+            "responsable"
+          ]
+        },
+        {
+          "categorie": "Lead",
+          "priorite": 6,
+          "motsCles": [
+            "lead",
+            "chargé",
+            "chargée"
+          ]
+        },
+        {
+          "categorie": "Contributor",
+          "priorite": 7,
+          "motsCles": [
+            "ingénieur",
+            "ingénieure",
+            "analyste",
+            "acheteur",
+            "consultant",
+            "consultante",
+            "assistant",
+            "expert",
+            "experte",
+            "technicien",
+            "chef de projet"
+          ]
+        }
+      ]
+    }
+  ],
+  "derives": [
+    {
+      "id": "buyerRole",
+      "libelle": "Buyer Role",
+      "depuis": "seniorite",
+      "table": {
+        "Founder": "Oui",
+        "C-Level": "Oui",
+        "Director": "Oui",
+        "Head": "Oui",
+        "Manager": "Oui",
+        "Lead": "Non",
+        "Contributor": "Non"
+      },
+      "defaut": ""
+    }
+  ]
+}

@@ -1,0 +1,803 @@
+{
+  "defaut": {
+    "matrice": {
+      "version": 1,
+      "nom": "Matrice d'origine — efficacité énergétique",
+      "axes": [
+        {
+          "id": "categorie",
+          "libelle": "Catégorie",
+          "regles": [
+            {
+              "categorie": "RSE",
+              "priorite": 1,
+              "motsCles": [
+                "rse",
+                "environnement",
+                "durable",
+                "écologie",
+                "DD"
+              ]
+            },
+            {
+              "categorie": "Énergie",
+              "priorite": 2,
+              "motsCles": [
+                "énergie",
+                "CVC",
+                "efficacité énergétique",
+                "thermique",
+                "power"
+              ]
+            },
+            {
+              "categorie": "Achat",
+              "priorite": 3,
+              "motsCles": [
+                "acheteur",
+                "achat",
+                "approvisionnement",
+                "procurement"
+              ]
+            },
+            {
+              "categorie": "Finance",
+              "priorite": 4,
+              "motsCles": [
+                "comptable",
+                "trésorier",
+                "investissement",
+                "budget",
+                "audit"
+              ]
+            },
+            {
+              "categorie": "Direction",
+              "priorite": 5,
+              "motsCles": [
+                "directeur",
+                "CEO",
+                "fondateur",
+                "président",
+                "manager"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "seniorite",
+          "libelle": "Séniorité",
+          "regles": [
+            {
+              "categorie": "Founder",
+              "priorite": 1,
+              "motsCles": [
+                "fondateur",
+                "fondatrice",
+                "co-founder"
+              ]
+            },
+            {
+              "categorie": "C-Level",
+              "priorite": 2,
+              "motsCles": [
+                "cto",
+                "cmo",
+                "cfo",
+                "cio",
+                "daf",
+                "dsi",
+                "evp"
+              ]
+            },
+            {
+              "categorie": "Director",
+              "priorite": 3,
+              "motsCles": [
+                "directeur",
+                "directrice",
+                "dir"
+              ]
+            },
+            {
+              "categorie": "Head",
+              "priorite": 4,
+              "motsCles": [
+                "head"
+              ]
+            },
+            {
+              "categorie": "Manager",
+              "priorite": 5,
+              "motsCles": [
+                "manager",
+                "responsable"
+              ]
+            },
+            {
+              "categorie": "Lead",
+              "priorite": 6,
+              "motsCles": [
+                "lead",
+                "chargé"
+              ]
+            },
+            {
+              "categorie": "Contributor",
+              "priorite": 7,
+              "motsCles": [
+                "ingénieur",
+                "analyste",
+                "acheteur",
+                "consultant"
+              ]
+            }
+          ]
+        }
+      ],
+      "derives": [
+        {
+          "id": "buyerRole",
+          "libelle": "Buyer Role",
+          "depuis": "seniorite",
+          "table": {
+            "Founder": "Oui",
+            "C-Level": "Oui",
+            "Director": "Oui",
+            "Head": "Oui",
+            "Manager": "Oui",
+            "Lead": "Non",
+            "Contributor": "Non"
+          },
+          "defaut": ""
+        }
+      ]
+    },
+    "intitules": [
+      "Directeur RSE",
+      "Analyste Financier",
+      "Responsable de l'efficacité énergétique",
+      "Directeur Général",
+      "CEO & Founder",
+      "Head of Procurement",
+      "Dir. Achats",
+      "Chargé IT",
+      "",
+      "Trésorier",
+      "Co-Founder & CTO",
+      "Office manager",
+      "Responsable Marketing Digital",
+      "DRH",
+      "VP Sales"
+    ],
+    "strict": [
+      {
+        "categorie": "RSE",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Contributor",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Énergie",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Direction",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Direction",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Achat",
+        "seniorite": "Head",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Achat",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Lead",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Finance",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Founder",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Direction",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      }
+    ],
+    "multi": [
+      {
+        "categorie": "RSE, Direction",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Contributor",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Énergie",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Direction",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Direction",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Achat",
+        "seniorite": "Head",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Achat",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Lead",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Finance",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Founder, C-Level",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Direction",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      }
+    ],
+    "axe0": [
+      "RSE",
+      "Non catégorisé",
+      "Énergie",
+      "Direction",
+      "Direction",
+      "Achat",
+      "Achat",
+      "Non catégorisé",
+      "Non catégorisé",
+      "Finance",
+      "Non catégorisé",
+      "Direction",
+      "Non catégorisé",
+      "Non catégorisé",
+      "Non catégorisé"
+    ]
+  },
+  "generique": {
+    "matrice": {
+      "version": 1,
+      "nom": "Départements — générique BtoB",
+      "axes": [
+        {
+          "id": "categorie",
+          "libelle": "Département",
+          "regles": [
+            {
+              "categorie": "Founders",
+              "priorite": 1,
+              "motsCles": [
+                "CEO",
+                "fondateur",
+                "fondatrice",
+                "co-founder",
+                "président",
+                "directeur général",
+                "directrice générale",
+                "DG",
+                "gérant",
+                "gérante",
+                "managing director"
+              ]
+            },
+            {
+              "categorie": "Product",
+              "priorite": 2,
+              "motsCles": [
+                "produit",
+                "product owner",
+                "product manager"
+              ]
+            },
+            {
+              "categorie": "Customer Success",
+              "priorite": 3,
+              "motsCles": [
+                "customer success",
+                "support",
+                "relation client"
+              ]
+            },
+            {
+              "categorie": "Purchase / Procurement",
+              "priorite": 4,
+              "motsCles": [
+                "achat",
+                "approvisionnement",
+                "procurement",
+                "acheteur"
+              ]
+            },
+            {
+              "categorie": "Training & Development",
+              "priorite": 5,
+              "motsCles": [
+                "formation",
+                "développement des compétences"
+              ]
+            },
+            {
+              "categorie": "Legal",
+              "priorite": 6,
+              "motsCles": [
+                "juridique",
+                "légal"
+              ]
+            },
+            {
+              "categorie": "HR",
+              "priorite": 7,
+              "motsCles": [
+                "RH",
+                "ressources humaines",
+                "talent",
+                "recrutement"
+              ]
+            },
+            {
+              "categorie": "IT",
+              "priorite": 8,
+              "motsCles": [
+                "informatique",
+                "IT",
+                "DSI",
+                "systèmes",
+                "technique"
+              ]
+            },
+            {
+              "categorie": "Finance / Admin",
+              "priorite": 9,
+              "motsCles": [
+                "finance",
+                "financier",
+                "financière",
+                "comptable",
+                "comptabilité",
+                "trésorier",
+                "trésorerie",
+                "contrôle de gestion",
+                "admin",
+                "budget",
+                "DAF"
+              ]
+            },
+            {
+              "categorie": "Operations",
+              "priorite": 10,
+              "motsCles": [
+                "opérations",
+                "exploitation",
+                "logistique",
+                "supply chain"
+              ]
+            },
+            {
+              "categorie": "Marketing",
+              "priorite": 11,
+              "motsCles": [
+                "marketing",
+                "communication",
+                "publicité",
+                "growth",
+                "acquisition"
+              ]
+            },
+            {
+              "categorie": "Sales",
+              "priorite": 12,
+              "motsCles": [
+                "commercial",
+                "ventes",
+                "business developer",
+                "account",
+                "sales"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "seniorite",
+          "libelle": "Séniorité",
+          "regles": [
+            {
+              "categorie": "Founder",
+              "priorite": 1,
+              "motsCles": [
+                "fondateur",
+                "fondatrice",
+                "co-founder"
+              ]
+            },
+            {
+              "categorie": "C-Level",
+              "priorite": 2,
+              "motsCles": [
+                "cto",
+                "cmo",
+                "cfo",
+                "cio",
+                "ceo",
+                "daf",
+                "dsi",
+                "evp"
+              ]
+            },
+            {
+              "categorie": "Director",
+              "priorite": 3,
+              "motsCles": [
+                "directeur",
+                "directrice",
+                "dir",
+                "président"
+              ]
+            },
+            {
+              "categorie": "Head",
+              "priorite": 4,
+              "motsCles": [
+                "head"
+              ]
+            },
+            {
+              "categorie": "Manager",
+              "priorite": 5,
+              "motsCles": [
+                "manager",
+                "responsable"
+              ]
+            },
+            {
+              "categorie": "Lead",
+              "priorite": 6,
+              "motsCles": [
+                "lead",
+                "chargé",
+                "chargée"
+              ]
+            },
+            {
+              "categorie": "Contributor",
+              "priorite": 7,
+              "motsCles": [
+                "ingénieur",
+                "ingénieure",
+                "analyste",
+                "acheteur",
+                "consultant",
+                "consultante",
+                "assistant",
+                "expert",
+                "experte",
+                "technicien",
+                "chef de projet"
+              ]
+            }
+          ]
+        }
+      ],
+      "derives": [
+        {
+          "id": "buyerRole",
+          "libelle": "Buyer Role",
+          "depuis": "seniorite",
+          "table": {
+            "Founder": "Oui",
+            "C-Level": "Oui",
+            "Director": "Oui",
+            "Head": "Oui",
+            "Manager": "Oui",
+            "Lead": "Non",
+            "Contributor": "Non"
+          },
+          "defaut": ""
+        }
+      ]
+    },
+    "intitules": [
+      "Directeur RSE",
+      "Analyste Financier",
+      "Responsable de l'efficacité énergétique",
+      "Directeur Général",
+      "CEO & Founder",
+      "Head of Procurement",
+      "Dir. Achats",
+      "Chargé IT",
+      "",
+      "Trésorier",
+      "Co-Founder & CTO",
+      "Office manager",
+      "Responsable Marketing Digital",
+      "DRH",
+      "VP Sales"
+    ],
+    "strict": [
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Finance / Admin",
+        "seniorite": "Contributor",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Founders",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Founders",
+        "seniorite": "C-Level",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Purchase / Procurement",
+        "seniorite": "Head",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Purchase / Procurement",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "IT",
+        "seniorite": "Lead",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Finance / Admin",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Founders",
+        "seniorite": "Founder",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Marketing",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Sales",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      }
+    ],
+    "multi": [
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Finance / Admin",
+        "seniorite": "Contributor",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Founders",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Founders",
+        "seniorite": "C-Level",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Purchase / Procurement",
+        "seniorite": "Head",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Purchase / Procurement",
+        "seniorite": "Director",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "IT",
+        "seniorite": "Lead",
+        "buyerRole": "Non"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Finance / Admin",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Founders",
+        "seniorite": "Founder, C-Level",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Marketing",
+        "seniorite": "Manager",
+        "buyerRole": "Oui"
+      },
+      {
+        "categorie": "Non catégorisé",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      },
+      {
+        "categorie": "Sales",
+        "seniorite": "Non catégorisé",
+        "buyerRole": ""
+      }
+    ],
+    "axe0": [
+      "Non catégorisé",
+      "Finance / Admin",
+      "Non catégorisé",
+      "Founders",
+      "Founders",
+      "Purchase / Procurement",
+      "Purchase / Procurement",
+      "IT",
+      "Non catégorisé",
+      "Finance / Admin",
+      "Founders",
+      "Non catégorisé",
+      "Marketing",
+      "Non catégorisé",
+      "Sales"
+    ]
+  },
+  "colonnes": [
+    {
+      "entetes": [
+        "Nom",
+        "Intitulé de poste"
+      ],
+      "index": 1
+    },
+    {
+      "entetes": [
+        "Job Title"
+      ],
+      "index": 0
+    },
+    {
+      "entetes": [
+        "Titre du poste"
+      ],
+      "index": 0
+    },
+    {
+      "entetes": [
+        "Nom",
+        "Email"
+      ],
+      "index": -1
+    }
+  ]
+}

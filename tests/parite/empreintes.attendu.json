@@ -1,0 +1,54 @@
+[
+  {
+    "valeur": {},
+    "empreinte": "fnv1a-5465b825"
+  },
+  {
+    "valeur": [],
+    "empreinte": "fnv1a-741638a5"
+  },
+  {
+    "valeur": {
+      "b": 1,
+      "a": [
+        1,
+        2.5,
+        "x"
+      ],
+      "c": null
+    },
+    "empreinte": "fnv1a-8a40abd9"
+  },
+  {
+    "valeur": {
+      "nomListeExclusion": "x",
+      "nomRecherche": "y",
+      "nombre": 1
+    },
+    "empreinte": "fnv1a-873bc8ce"
+  },
+  {
+    "valeur": {
+      "Zeta": 1,
+      "alpha": 2,
+      "Alpha": 3
+    },
+    "empreinte": "fnv1a-3b8a9ecf"
+  },
+  {
+    "valeur": [
+      "é",
+      "\n",
+      "\u0001",
+      "😀"
+    ],
+    "empreinte": "fnv1a-28969817"
+  },
+  {
+    "valeur": {
+      "volume": 10,
+      "ratio": 0.1
+    },
+    "empreinte": "fnv1a-ac12d658"
+  }
+]

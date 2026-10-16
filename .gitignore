@@ -1,0 +1,15 @@
+# Les données d'une mission réelle n'appartiennent jamais à ce dépôt.
+*-controle-qa.xlsx
+*-conformes.xlsx
+*-qualifie.xlsx
+/missions/
+
+# Secrets
+.env*
+*.local
+
+# Bruit
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
