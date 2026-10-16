@@ -69,6 +69,8 @@ The script accepts three shapes: a full setup (`{ "client", "mission", "configur
 | `couverture_filtres` | every mandatory filter linked to an active rule and to its column |
 | `candidats` | a non-empty candidates file |
 
+**Not covered yet**: the rules (`regles`), `champsObligatoires` and `colonnesFinales` carry no fingerprint. Widening a value list, disabling a rule or lowering its importance passes the preflight; such a change must go back to the human who validates the mission.
+
 The validations are human: the web page dates them and memorises their fingerprints. `leadlint fingerprints --mission mission.json --blacklist exclusions.csv` computes those fingerprints, to check a mission; it validates nothing.
 
 ## The persona matrix (`mode: "persona"`)

@@ -1,0 +1,450 @@
+{
+  "client": "Client fictif",
+  "mission": "ESN 11-50",
+  "description": "Décideurs d'ESN françaises, catégorie LinkedIn 11-50 et 10 à 50 employés visibles.",
+  "mode": "revalidation_b2b",
+  "configuration": {
+    "mode": "revalidation_b2b",
+    "schemaVersion": 2,
+    "regles": [
+      {
+        "id": "r-pays-est_dans",
+        "critereId": "pays",
+        "operateur": "est_dans",
+        "valeur": [
+          "France"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-tranche_effectif_source-est_dans",
+        "critereId": "tranche_effectif_source",
+        "operateur": "est_dans",
+        "valeur": [
+          "10-19",
+          "20-49"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-activite-contient_un",
+        "critereId": "activite",
+        "operateur": "contient_un",
+        "valeur": [
+          "ESN",
+          "entreprise de services numériques",
+          "services numériques"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-activite-ne_contient_aucun",
+        "critereId": "activite",
+        "operateur": "ne_contient_aucun",
+        "valeur": [
+          "SaaS",
+          "éditeur de logiciel",
+          "plateforme",
+          "marketplace",
+          "mise en relation",
+          "recrutement"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-categorie_linkedin-est_dans",
+        "critereId": "categorie_linkedin",
+        "operateur": "est_dans",
+        "valeur": [
+          "11-50"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-employes_visibles-entre",
+        "critereId": "employes_visibles",
+        "operateur": "entre",
+        "valeur": {
+          "min": 10,
+          "max": 50
+        },
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-qualification_activite-est_dans",
+        "critereId": "qualification_activite",
+        "operateur": "est_dans",
+        "valeur": [
+          "ESN prestation IT"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-poste-est_dans",
+        "critereId": "poste",
+        "operateur": "est_dans",
+        "valeur": [
+          "CEO",
+          "Chief Executive Officer",
+          "Founder",
+          "Co-founder",
+          "Co founder",
+          "Fondateur",
+          "Fondatrice",
+          "Co-fondateur",
+          "Co-fondatrice"
+        ],
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-email_pro-email_professionnel",
+        "critereId": "email_pro",
+        "operateur": "email_professionnel",
+        "valeur": true,
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-source_email-present",
+        "critereId": "source_email",
+        "operateur": "present",
+        "valeur": true,
+        "importance": "verification",
+        "siAbsent": "verifier",
+        "active": true
+      },
+      {
+        "id": "r-mobile_fr-mobile_francais",
+        "critereId": "mobile_fr",
+        "operateur": "mobile_francais",
+        "valeur": true,
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-source_mobile-provenance_professionnelle",
+        "critereId": "source_mobile",
+        "operateur": "provenance_professionnelle",
+        "valeur": true,
+        "importance": "verification",
+        "siAbsent": "verifier",
+        "active": true
+      },
+      {
+        "id": "r-blacklist-pas_blackliste",
+        "critereId": "blacklist",
+        "operateur": "pas_blackliste",
+        "valeur": true,
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      },
+      {
+        "id": "r-doublon-unique",
+        "critereId": "doublon",
+        "operateur": "unique",
+        "valeur": true,
+        "importance": "bloquant",
+        "siAbsent": "rejeter",
+        "active": true
+      }
+    ],
+    "champsObligatoires": [
+      "nomComplet",
+      "entreprise",
+      "poste",
+      "linkedinProfil",
+      "categorieLinkedIn",
+      "employesVisibles",
+      "emailProfessionnel",
+      "mobile"
+    ],
+    "colonnesFinales": [
+      {
+        "champ": "nomComplet",
+        "libelle": "Nom complet"
+      },
+      {
+        "champ": "entreprise",
+        "libelle": "Entreprise"
+      },
+      {
+        "champ": "poste",
+        "libelle": "Poste"
+      },
+      {
+        "champ": "linkedinProfil",
+        "libelle": "LinkedIn profil"
+      },
+      {
+        "champ": "categorieLinkedIn",
+        "libelle": "Catégorie LinkedIn"
+      },
+      {
+        "champ": "employesVisibles",
+        "libelle": "Nombre d'employés visibles"
+      },
+      {
+        "champ": "emailProfessionnel",
+        "libelle": "Email professionnel"
+      },
+      {
+        "champ": "mobile",
+        "libelle": "Mobile professionnel"
+      }
+    ],
+    "mappingCandidats": {
+      "nomComplet": "Nom complet",
+      "entreprise": "Entreprise",
+      "poste": "Poste",
+      "linkedinProfil": "LinkedIn profil",
+      "linkedinEntreprise": "LinkedIn entreprise",
+      "categorieLinkedIn": "Catégorie LinkedIn",
+      "employesVisibles": "Employés visibles",
+      "pays": "Pays",
+      "activite": "Activité",
+      "tagsFournisseur": "Tags Pharow",
+      "trancheEffectifFournisseur": "Effectif France Pharow",
+      "qualificationActivite": "Qualification métier QA",
+      "siteEntreprise": "Site",
+      "siren": "SIREN",
+      "emailProfessionnel": "Email professionnel",
+      "sourceEmail": "Source email",
+      "mobile": "Mobile",
+      "sourceMobile": "Source mobile"
+    },
+    "mappingBlacklist": {
+      "entreprise": "Entreprise",
+      "linkedinEntreprise": "LinkedIn entreprise",
+      "siteEntreprise": "Site",
+      "siren": "SIREN"
+    },
+    "blacklist": {
+      "obligatoire": true,
+      "nom": "Liste d'exclusion",
+      "typeSource": "fichier",
+      "volumeAttendu": 5,
+      "empreinte": "fnv1a-951be802",
+      "miseAJourLe": "2026-10-01T09:05:00.000Z"
+    },
+    "strategie": {
+      "lignes": [
+        {
+          "id": "s-1",
+          "categorie": "type_entreprise",
+          "critereClient": "ESN de prestation IT",
+          "methode": "expression",
+          "parametrage": "ESN",
+          "exclusions": "Éditeurs SaaS/logiciels, plateformes, recrutement pur",
+          "controleAval": "Rejouer l'expression dans la colonne exportée puis QA du modèle économique",
+          "logique": "OU",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-2",
+          "categorie": "type_entreprise",
+          "critereClient": "ESN de prestation IT",
+          "methode": "expression",
+          "parametrage": "entreprise de services numériques",
+          "exclusions": "Éditeurs SaaS/logiciels, plateformes, recrutement pur",
+          "controleAval": "Rejouer l'expression dans la colonne exportée puis QA du modèle économique",
+          "logique": "OU",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-3",
+          "categorie": "type_entreprise",
+          "critereClient": "ESN de prestation IT",
+          "methode": "expression",
+          "parametrage": "services numériques",
+          "exclusions": "Éditeurs SaaS/logiciels, plateformes, recrutement pur",
+          "controleAval": "Rejouer l'expression dans la colonne exportée puis QA du modèle économique",
+          "logique": "OU",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-4",
+          "categorie": "exclusions",
+          "critereClient": "Exclure les modèles hors cible",
+          "methode": "expression",
+          "parametrage": "SaaS OU éditeur de logiciel OU plateforme OU marketplace OU mise en relation OU recrutement",
+          "exclusions": "Aucune",
+          "controleAval": "Rejet automatique ou QA métier",
+          "logique": "EXCLURE",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-5",
+          "categorie": "taille",
+          "critereClient": "10 à 49 salariés France",
+          "methode": "effectif",
+          "parametrage": "Effectif France 10-19 OU 20-49",
+          "exclusions": "1-9 et 50+",
+          "controleAval": "Rejouer la tranche fournisseur puis QA LinkedIn 10 à 50 employés visibles",
+          "logique": "ET",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-6",
+          "categorie": "localisation",
+          "critereClient": "France",
+          "methode": "localisation",
+          "parametrage": "Pays du siège: France",
+          "exclusions": "Hors France",
+          "controleAval": "Rejouer le pays exporté",
+          "logique": "ET",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-7",
+          "categorie": "exclusions",
+          "critereClient": "Zéro entreprise blacklistée",
+          "methode": "liste_exclusion",
+          "parametrage": "Liste d'exclusion du client sélectionnée et active",
+          "exclusions": "Toutes les correspondances blacklist",
+          "controleAval": "Empreinte, volume et croisement strict",
+          "logique": "EXCLURE",
+          "precision": "granulaire",
+          "obligatoire": true
+        },
+        {
+          "id": "s-8",
+          "categorie": "contacts",
+          "critereClient": "CEO, Founder ou Co-founder",
+          "methode": "contacts",
+          "parametrage": "CEO; Founder; Co-founder uniquement, après validation des comptes",
+          "exclusions": "Tout autre poste",
+          "controleAval": "persona-sourcing puis règle de poste",
+          "logique": "ET",
+          "precision": "granulaire",
+          "obligatoire": true
+        }
+      ],
+      "limites": "Les trois expressions ESN sont réunies dans un même groupe Pharow (OU). Les autres critères sont dans des groupes séparés (ET) et les modèles hors cible dans le groupe d'exclusion. Les termes génériques informatique, IT, software, data, cloud, développement ou conseil tech ne valident jamais l'activité seuls. La catégorie LinkedIn et le nombre d'employés visibles exigent une QA distincte.",
+      "valideeLe": "2026-10-01T09:00:00.000Z",
+      "empreinteValidee": "fnv1a-22e1abfd"
+    },
+    "pharow": {
+      "nomRecherche": "ESN — 11-50",
+      "nomListeExclusion": "Liste d'exclusion du client",
+      "filtres": [
+        {
+          "id": "f-1",
+          "recherche": "ESN — 11-50",
+          "etape": "comptes",
+          "libelle": "Recherche d'expressions",
+          "valeurs": [
+            "ESN",
+            "entreprise de services numériques",
+            "services numériques"
+          ],
+          "logique": "OU",
+          "preuve": "export",
+          "regleId": "r-activite-contient_un",
+          "obligatoire": true
+        },
+        {
+          "id": "f-2",
+          "recherche": "ESN — 11-50",
+          "etape": "comptes",
+          "libelle": "Expressions exclues",
+          "valeurs": [
+            "SaaS",
+            "éditeur de logiciel",
+            "plateforme",
+            "marketplace",
+            "mise en relation",
+            "recrutement"
+          ],
+          "logique": "EXCLURE",
+          "preuve": "export",
+          "regleId": "r-activite-ne_contient_aucun",
+          "obligatoire": true
+        },
+        {
+          "id": "f-3",
+          "recherche": "ESN — 11-50",
+          "etape": "comptes",
+          "libelle": "Pays du siège",
+          "valeurs": [
+            "France"
+          ],
+          "logique": "ET",
+          "preuve": "export",
+          "regleId": "r-pays-est_dans",
+          "obligatoire": true
+        },
+        {
+          "id": "f-4",
+          "recherche": "ESN — 11-50",
+          "etape": "comptes",
+          "libelle": "Effectif France",
+          "valeurs": [
+            "10-19",
+            "20-49"
+          ],
+          "logique": "OU",
+          "preuve": "export",
+          "regleId": "r-tranche_effectif_source-est_dans",
+          "obligatoire": true
+        },
+        {
+          "id": "f-5",
+          "recherche": "ESN — 11-50",
+          "etape": "comptes",
+          "libelle": "Liste d'exclusion client",
+          "valeurs": [
+            "Liste d'exclusion du client"
+          ],
+          "logique": "EXCLURE",
+          "preuve": "calcul",
+          "regleId": "r-blacklist-pas_blackliste",
+          "obligatoire": true
+        }
+      ],
+      "echantillonTemoins": [
+        "Orbite Conseil",
+        "Nuage Dix",
+        "Comète Services",
+        "Astrolabe IT",
+        "Satellite Numérique"
+      ],
+      "volumeResultats": 128,
+      "captureNom": "recherche.png",
+      "captureEmpreinte": "fnv1a-capture",
+      "rechercheValideeLe": "2026-10-01T09:10:00.000Z",
+      "exportBrutNom": "export-exemple.csv",
+      "exportBrutVolume": 50,
+      "exportCaptureLe": "2026-10-01T09:20:00.000Z",
+      "filtresSaisisApresExtractionLe": "2026-10-01T09:21:00.000Z",
+      "exclusionConfirmeeLe": "2026-10-01T09:22:00.000Z",
+      "filtresConfirmesLe": "2026-10-01T09:23:00.000Z",
+      "rechercheValideeEmpreinte": "fnv1a-bd9ab80f",
+      "filtresConfirmesEmpreinte": "fnv1a-fd2ec0f7"
+    }
+  }
+}

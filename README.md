@@ -51,7 +51,7 @@ Without uv: clone the repository, `python -m pip install openpyxl` (Python 3.9+)
 - **Contact**: professional email (personal mailboxes refused), French mobile (06/07, +33), professional source of the email and of the mobile.
 - **Exclusion list**: matched by LinkedIn company URL, then domain, SIREN, then normalized company name (legal forms removed).
 - **Duplicates**: same LinkedIn profile, same email, same mobile, or same name in the same company.
-- **Preflight (11 controls)**: nothing is delivered until a human has validated the targeting (strategy, real search, filters) and the loaded exclusion list is the validated one (volume and fingerprint). If one control fails, the exit code is 2 and the output says which.
+- **Preflight (11 controls)**: nothing is delivered until a human has validated the targeting (strategy, real search, filters) and the loaded exclusion list is the validated one (volume and fingerprint). If one control fails, the exit code is 2 and the output says which. The rules themselves (`regles`) carry no fingerprint yet: the skill forbids an agent to edit them, but the preflight would not notice a change.
 
 Each line gets a verdict and **one main cause**: the control that decided it.
 

@@ -49,7 +49,7 @@ The French names are exact aliases (same result, same exit code): `b2b` = `check
 2. **`--diagnostic`** returns the verdicts even when the preflight blocks, to understand a list; the file it produces carries `-diagnostic-` in its name and **no compliant file is written**. A diagnostic is never delivered.
 3. **After `check`, copy the bilan as is**: total, compliant, to review, rejected, and every non-zero main cause. Verify `invariants`: `total = compliant + to review + rejected` and `to review + rejected = sum of the causes`.
 4. **Only the `À vérifier` lines go to human review or to business QA**, with their cause. Rejected lines are not silently rescued; compliant lines are in `<export>-conformes.xlsx`, with the mission's columns and in its order.
-5. **Never edit the mission to make a list pass**: changing a rule, a filter or the exclusion list invalidates their fingerprint, and the preflight will see it.
+5. **Never edit the mission to make a list pass.** The preflight sees a changed strategy, search, filter set or exclusion list (their fingerprints), but **not a changed rule**: the rules (`regles`), the mandatory fields and the final columns carry no fingerprint yet. Widening a country, disabling the job-title rule or softening a rule's importance passes the preflight and adds compliant lines (measured on the example: 15 becomes 16 or 17). Any change to them goes back to the human who validates the mission.
 
 ## What `check` returns
 

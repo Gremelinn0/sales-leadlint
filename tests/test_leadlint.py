@@ -5,8 +5,10 @@
 
 Les attendus de `tests/parite/` sont rendus par le moteur de la page web (oracle
 `scripts/segmentation/oracle_parite.ts` du dépôt de la Marketplace). Le banc rejoue les
-mêmes entrées dans le script et exige le même résultat, champ par champ. Deux contrôles
-sont négatifs : un banc incapable de dire non ne vaut pas son oui.
+mêmes entrées dans le script et exige le même résultat, champ par champ. Le pont de bout
+en bout : la mission que la page fait télécharger (`mission-telechargee.json`) passe le
+prévol du script et en rend les empreintes. Des contrôles sont négatifs : un banc
+incapable de dire non ne vaut pas son oui.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[1]
 PARITE = RACINE / "tests" / "parite"
+EXEMPLES = RACINE / "skills" / "leadlint" / "exemples"
 SCRIPT = RACINE / "skills" / "leadlint" / "scripts" / "leadlint.py"
 sys.path.insert(0, str(SCRIPT.parent))
 
@@ -278,6 +281,53 @@ class LigneDeCommande(unittest.TestCase):
         self.assertEqual(bilan["colonne"], "Job title")
         self.assertEqual(bilan["total"], 3)
         self.assertTrue(Path(bilan["fichier"]).exists())
+
+
+class MissionTelechargee(unittest.TestCase):
+    """Le pont web -> script : le fichier que le bouton « Télécharger la mission pour votre IA » fait télécharger passe le script.
+
+    `mission-telechargee.json` est la sortie de `missionPourFichier` (oracle, scénario 6), validée dans la page sur l'export et la
+    liste d'exclusion d'exemple de `skills/leadlint/exemples/` ; `mission-telechargee-attendu.json` porte les empreintes que la page
+    calcule pour elle. Si la page change ce qu'elle écrit, ou le script ce qu'il lit, l'un de ces trois tests tombe.
+    """
+
+    EXPORT = EXEMPLES / "export-exemple.csv"
+    EXCLUSIONS = EXEMPLES / "exclusions-exemple.csv"
+    MISSION = PARITE / "mission-telechargee.json"
+
+    def prevol(self, mission: Path) -> tuple[int, dict]:
+        code, sortie = lancer("preflight", str(self.EXPORT), "--mission", str(mission), "--blacklist", str(self.EXCLUSIONS), "--json")
+        return code, json.loads(sortie)["prevol"]
+
+    def test_le_prevol_laisse_passer_la_mission_telechargee(self):
+        code, prevol = self.prevol(self.MISSION)
+        controles = prevol["controles"]
+        self.assertEqual(code, 0, [c["id"] for c in controles if not c["valide"]])
+        self.assertTrue(prevol["autorise"])
+        self.assertEqual((sum(c["valide"] for c in controles), len(controles)), (11, 11))
+
+    def test_les_empreintes_du_script_sont_celles_de_la_page(self):
+        attendu = lire("mission-telechargee-attendu.json")
+        self.assertEqual(set(attendu), {"strategie", "recherche", "filtres", "blacklist", "blacklist_volume"}, "un attendu amputé ne prouverait rien")
+        code, sortie = lancer("fingerprints", "--mission", str(self.MISSION), "--blacklist", str(self.EXCLUSIONS), "--json")
+        self.assertEqual(code, 0, sortie)
+        obtenu = json.loads(sortie)
+        self.assertEqual(ecarts(attendu, {champ: obtenu[champ] for champ in attendu if champ in obtenu}), [])
+
+    def test_une_valeur_de_la_strategie_modifiee_apres_validation_bloque_le_prevol(self):
+        """Contrôle négatif : la même mission, une seule valeur de sa stratégie changée en mémoire, n'est plus laissée passer."""
+        self.assertEqual(self.prevol(self.MISSION)[0], 0, "le témoin positif : la mission d'origine passe, avec les mêmes fichiers")
+        mission = json.loads(self.MISSION.read_text(encoding="utf-8"))
+        mission["configuration"]["strategie"]["lignes"][0]["parametrage"] += " OU 50-99"
+        with tempfile.TemporaryDirectory(prefix="leadlint-") as dossier:
+            modifiee = Path(dossier) / "mission-modifiee.json"
+            modifiee.write_text(json.dumps(mission, ensure_ascii=False), encoding="utf-8")
+            code, prevol = self.prevol(modifiee)
+        refuses = {c["id"] for c in prevol["controles"] if c["bloquant"] and not c["valide"]}
+        self.assertEqual(code, 2)
+        self.assertFalse(prevol["autorise"])
+        self.assertIn("strategie", refuses)
+        self.assertLessEqual(refuses, {"strategie", "recherche_validee"}, "seul le verrou de la stratégie (et la recherche qui l'embarque) doit tomber")
 
 
 def cellules_du_classeur(chemin: str) -> dict:
