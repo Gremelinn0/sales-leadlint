@@ -37,7 +37,7 @@ python scripts/moulinette.py empreintes --moulinette mission.json --blacklist ex
 
 ## La règle pour un agent
 
-1. **Lancer `prevol` d'abord.** S'il bloque, ne pas contourner : rapporter les contrôles en échec à l'humain qui valide la mission. La stratégie de recherche, la recherche réelle et la liste d'exclusion se valident par un humain, jamais par l'agent.
+1. **Lancer `prevol` d'abord.** S'il bloque, ne pas contourner : rapporter les contrôles en échec à l'humain qui valide la mission. La stratégie de recherche, la recherche réelle et la liste d'exclusion se valident par un humain, jamais par l'agent : la date de validation et l'empreinte (`moulinette.py empreintes`) ne s'inscrivent dans la mission que sur son accord explicite.
 2. **`--diagnostic`** rend les verdicts même quand le prévol bloque, pour comprendre une liste ; le fichier produit porte `-diagnostic-` dans son nom et **aucun fichier de conformes n'est écrit**. Un diagnostic ne se livre jamais.
 3. **Après `b2b`, recopier le bilan tel quel** : total, conformes, à vérifier, rejetés, et chaque cause principale non nulle. Vérifier `invariants` : `total = conformes + à vérifier + rejetés` et `à vérifier + rejetés = somme des causes`.
 4. **Seules les lignes `À vérifier` partent en revue humaine ou en QA métier**, avec leur cause. Les rejetées ne se repêchent pas en silence ; les conformes sont dans `<export>-conformes.xlsx`, aux colonnes et dans l'ordre de la mission.
