@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 ICI = Path(__file__).resolve().parent
 
 
