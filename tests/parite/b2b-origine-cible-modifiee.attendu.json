@@ -1,0 +1,2794 @@
+{
+  "empreintes": {
+    "strategie": "fnv1a-4279679e",
+    "recherche": "fnv1a-d9a5d144",
+    "filtres": "fnv1a-741638a5",
+    "blacklist": "fnv1a-9db1174f",
+    "regles": "fnv1a-db9a1f2b"
+  },
+  "prevol": {
+    "autorise": false,
+    "controles": [
+      {
+        "id": "cible_validee",
+        "libelle": "Cible validée et inchangée",
+        "valide": false,
+        "bloquant": true
+      },
+      {
+        "id": "configuration",
+        "libelle": "Règles, colonnes finales et correspondance des colonnes du fichier candidats complètes",
+        "valide": true,
+        "bloquant": true
+      },
+      {
+        "id": "blacklist",
+        "libelle": "Liste d'exclusion chargée et colonnes de correspondance définies",
+        "valide": true,
+        "bloquant": true
+      },
+      {
+        "id": "empreinte",
+        "libelle": "Volume et signature de la liste d'exclusion cohérents",
+        "valide": true,
+        "bloquant": true
+      },
+      {
+        "id": "candidats",
+        "libelle": "Fichier candidats prêt",
+        "valide": true,
+        "bloquant": true
+      }
+    ]
+  },
+  "lignes": [
+    {
+      "numeroLigne": 2,
+      "statut": "Conforme",
+      "cause": null,
+      "typeProbleme": "",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 1",
+        "entreprise": "Nuage 1",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-1",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "62.01Z"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 1",
+          "valeurNormalisee": "Camille Exemple 1",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 1",
+          "valeurNormalisee": "Nuage 1",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-1",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-1",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "62.01Z",
+          "valeurNormalisee": "62.01Z",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 3,
+      "statut": "Rejeté",
+      "cause": "code_naf",
+      "typeProbleme": "Code NAF",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Code NAF : Valeur exclue : 62 02a"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 2",
+        "entreprise": "Nuage 2",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-2",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "62.02A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 2",
+          "valeurNormalisee": "Camille Exemple 2",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 2",
+          "valeurNormalisee": "Nuage 2",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-2",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-2",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "62.02A",
+          "valeurNormalisee": "62.02A",
+          "colonneSource": "NAF",
+          "raison": "Valeur exclue : 62 02a"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 4,
+      "statut": "Rejeté",
+      "cause": "code_naf",
+      "typeProbleme": "Code NAF",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Code NAF : Valeur exclue : 6202a"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 3",
+        "entreprise": "Nuage 3",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-3",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "6202a"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 3",
+          "valeurNormalisee": "Camille Exemple 3",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 3",
+          "valeurNormalisee": "Nuage 3",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-3",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-3",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "6202a",
+          "valeurNormalisee": "6202a",
+          "colonneSource": "NAF",
+          "raison": "Valeur exclue : 6202a"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 5,
+      "statut": "Rejeté",
+      "cause": "code_naf",
+      "typeProbleme": "Code NAF",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Code NAF : Valeur exclue : 70 22z"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 4",
+        "entreprise": "Nuage 4",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-4",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "70.22Z"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 4",
+          "valeurNormalisee": "Camille Exemple 4",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 4",
+          "valeurNormalisee": "Nuage 4",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-4",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-4",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": " 70.22Z ",
+          "valeurNormalisee": "70.22Z",
+          "colonneSource": "NAF",
+          "raison": "Valeur exclue : 70 22z"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 6,
+      "statut": "Conforme",
+      "cause": null,
+      "typeProbleme": "",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Code NAF : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 5",
+        "entreprise": "Nuage 5",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-5",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 5",
+          "valeurNormalisee": "Camille Exemple 5",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 5",
+          "valeurNormalisee": "Nuage 5",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-5",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-5",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "NAF",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 7,
+      "statut": "Conforme",
+      "cause": null,
+      "typeProbleme": "",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 6",
+        "entreprise": "Nuage 6",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-6",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "62.02B"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 6",
+          "valeurNormalisee": "Camille Exemple 6",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 6",
+          "valeurNormalisee": "Nuage 6",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-6",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-6",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "62.02B",
+          "valeurNormalisee": "62.02B",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 8,
+      "statut": "Conforme",
+      "cause": null,
+      "typeProbleme": "",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 7",
+        "entreprise": "Nuage 7",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-7",
+        "pays": "France",
+        "activite": "Salon de makeup et beauté",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 7",
+          "valeurNormalisee": "Camille Exemple 7",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 7",
+          "valeurNormalisee": "Nuage 7",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-7",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-7",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Salon de makeup et beauté",
+          "valeurNormalisee": "Salon de makeup et beauté",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 9,
+      "statut": "Rejeté",
+      "cause": "activite",
+      "typeProbleme": "Mauvaise entreprise",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Activité / expressions : Expression exclue : make"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 8",
+        "entreprise": "Nuage 8",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-8",
+        "pays": "France",
+        "activite": "Automatisations make.com pour PME",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 8",
+          "valeurNormalisee": "Camille Exemple 8",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 8",
+          "valeurNormalisee": "Nuage 8",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-8",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-8",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "Automatisations make.com pour PME",
+          "valeurNormalisee": "Automatisations make.com pour PME",
+          "colonneSource": "Activité",
+          "raison": "Expression exclue : make"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 10,
+      "statut": "Rejeté",
+      "cause": "activite",
+      "typeProbleme": "Mauvaise entreprise",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Activité / expressions : Expression exclue : make"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 9",
+        "entreprise": "Nuage 9",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-9",
+        "pays": "France",
+        "activite": "Agence MAKE",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 9",
+          "valeurNormalisee": "Camille Exemple 9",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 9",
+          "valeurNormalisee": "Nuage 9",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-9",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-9",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "Agence MAKE",
+          "valeurNormalisee": "Agence MAKE",
+          "colonneSource": "Activité",
+          "raison": "Expression exclue : make"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 11,
+      "statut": "Rejeté",
+      "cause": "poste",
+      "typeProbleme": "Mauvais intitulé de poste",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Poste du décideur : Expression exclue : open to work"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 10",
+        "entreprise": "Nuage 10",
+        "poste": "Gérant | Open to Work",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-10",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 10",
+          "valeurNormalisee": "Camille Exemple 10",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 10",
+          "valeurNormalisee": "Nuage 10",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-10",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-10",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Gérant | Open to Work",
+          "valeurNormalisee": "Gérant | Open to Work",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : gerant"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "Gérant | Open to Work",
+          "valeurNormalisee": "Gérant | Open to Work",
+          "colonneSource": "Poste",
+          "raison": "Expression exclue : open to work"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 12,
+      "statut": "Rejeté",
+      "cause": "poste",
+      "typeProbleme": "Mauvais intitulé de poste",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Poste du décideur : Expression exclue : consultant"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 11",
+        "entreprise": "Nuage 11",
+        "poste": "Co-founder et consultant",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-11",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 11",
+          "valeurNormalisee": "Camille Exemple 11",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 11",
+          "valeurNormalisee": "Nuage 11",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-11",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-11",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder et consultant",
+          "valeurNormalisee": "Co-founder et consultant",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "Co-founder et consultant",
+          "valeurNormalisee": "Co-founder et consultant",
+          "colonneSource": "Poste",
+          "raison": "Expression exclue : consultant"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 13,
+      "statut": "Rejeté",
+      "cause": "poste",
+      "typeProbleme": "Mauvais intitulé de poste",
+      "raisons": [
+        "Poste du décideur : Valeur hors liste",
+        "Département : Donnée absente — politique : ignorer",
+        "Poste du décideur : Expression exclue : open to work"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 12",
+        "entreprise": "Nuage 12",
+        "poste": "Open to work",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-12",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 12",
+          "valeurNormalisee": "Camille Exemple 12",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 12",
+          "valeurNormalisee": "Nuage 12",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-12",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-12",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "Open to work",
+          "valeurNormalisee": "Open to work",
+          "colonneSource": "Poste",
+          "raison": "Valeur hors liste"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "Open to work",
+          "valeurNormalisee": "Open to work",
+          "colonneSource": "Poste",
+          "raison": "Expression exclue : open to work"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 14,
+      "statut": "À vérifier",
+      "cause": "pays",
+      "typeProbleme": "Pays",
+      "raisons": [
+        "Pays : Donnée absente — politique : verifier",
+        "Département : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 13",
+        "entreprise": "Nuage 13",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-13",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 13",
+          "valeurNormalisee": "Camille Exemple 13",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 13",
+          "valeurNormalisee": "Nuage 13",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-13",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-13",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "Pays",
+          "raison": "Donnée absente — politique : verifier"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 15,
+      "statut": "Conforme",
+      "cause": null,
+      "typeProbleme": "",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 14",
+        "entreprise": "Nuage 14",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-14",
+        "pays": "Belgique",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 14",
+          "valeurNormalisee": "Camille Exemple 14",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 14",
+          "valeurNormalisee": "Nuage 14",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-14",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-14",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Belgique",
+          "valeurNormalisee": "Belgique",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : belgique"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 16,
+      "statut": "Rejeté",
+      "cause": "blacklist",
+      "typeProbleme": "Liste d'exclusion",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Entreprise absente de la liste d'exclusion : Entreprise présente dans la liste d'exclusion (nom normalisé)"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 15",
+        "entreprise": "Entreprise Interdite SAS",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-15",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 15",
+          "valeurNormalisee": "Camille Exemple 15",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Entreprise Interdite SAS",
+          "valeurNormalisee": "Entreprise Interdite SAS",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-15",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-15",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "nom normalisé",
+          "valeurNormalisee": "nom normalisé",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise présente dans la liste d'exclusion (nom normalisé)"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 17,
+      "statut": "Rejeté",
+      "cause": "doublon",
+      "typeProbleme": "Doublon",
+      "raisons": [
+        "Département : Donnée absente — politique : ignorer",
+        "Contact unique : Doublon de la ligne 2"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 1",
+        "entreprise": "Nuage 1",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-1",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "62.01Z"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 1",
+          "valeurNormalisee": "Camille Exemple 1",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 1",
+          "valeurNormalisee": "Nuage 1",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-1",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-1",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "62.01Z",
+          "valeurNormalisee": "62.01Z",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Échoué",
+          "valeurBrute": "2",
+          "valeurNormalisee": "2",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Doublon de la ligne 2"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 18,
+      "statut": "À vérifier",
+      "cause": "poste",
+      "typeProbleme": "Mauvais intitulé de poste",
+      "raisons": [
+        "Poste du décideur : Donnée absente — politique : verifier",
+        "Département : Donnée absente — politique : ignorer",
+        "Poste du décideur : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "nomComplet": "Camille Exemple 17",
+        "entreprise": "Nuage 17",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-17",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Camille Exemple 17",
+          "valeurNormalisee": "Camille Exemple 17",
+          "colonneSource": "Nom complet",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 17",
+          "valeurNormalisee": "Nuage 17",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-17",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-17",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "Poste",
+          "raison": "Donnée absente — politique : verifier"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "Poste",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    },
+    {
+      "numeroLigne": 19,
+      "statut": "Rejeté",
+      "cause": "obligatoire:nomComplet",
+      "typeProbleme": "Champ obligatoire manquant — nomComplet",
+      "raisons": [
+        "Champ obligatoire : nomComplet : Champ obligatoire absent",
+        "Département : Donnée absente — politique : ignorer"
+      ],
+      "valeurs": {
+        "entreprise": "Nuage 18",
+        "poste": "Co-founder",
+        "linkedinProfil": "https://www.linkedin.com/in/exemple-fictif-18",
+        "pays": "France",
+        "activite": "ESN spécialisée en développement, data et cloud",
+        "codeNaf": "47.11A"
+      },
+      "evaluations": [
+        {
+          "regleId": "obligatoire:nomComplet",
+          "critereId": "obligatoire:nomComplet",
+          "libelle": "Champ obligatoire : nomComplet",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "Nom complet",
+          "raison": "Champ obligatoire absent"
+        },
+        {
+          "regleId": "obligatoire:entreprise",
+          "critereId": "obligatoire:entreprise",
+          "libelle": "Champ obligatoire : entreprise",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Nuage 18",
+          "valeurNormalisee": "Nuage 18",
+          "colonneSource": "Entreprise",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "obligatoire:linkedinProfil",
+          "critereId": "obligatoire:linkedinProfil",
+          "libelle": "Champ obligatoire : linkedinProfil",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "https://www.linkedin.com/in/exemple-fictif-18",
+          "valeurNormalisee": "https://www.linkedin.com/in/exemple-fictif-18",
+          "colonneSource": "LinkedIn profil",
+          "raison": "Champ renseigné"
+        },
+        {
+          "regleId": "r-pays-est_dans",
+          "critereId": "pays",
+          "libelle": "Pays",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "France",
+          "valeurNormalisee": "France",
+          "colonneSource": "Pays",
+          "raison": "Valeur acceptée : france"
+        },
+        {
+          "regleId": "r-poste-est_dans",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Valeur acceptée : co founder"
+        },
+        {
+          "regleId": "r-departement-est_dans",
+          "critereId": "departement",
+          "libelle": "Département",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Donnée absente",
+          "valeurBrute": "",
+          "valeurNormalisee": "",
+          "colonneSource": "",
+          "raison": "Donnée absente — politique : ignorer"
+        },
+        {
+          "regleId": "r-activite-ne_contient_aucun",
+          "critereId": "activite",
+          "libelle": "Activité / expressions",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "ESN spécialisée en développement, data et cloud",
+          "valeurNormalisee": "ESN spécialisée en développement, data et cloud",
+          "colonneSource": "Activité",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-code_naf-n_est_pas_dans",
+          "critereId": "code_naf",
+          "libelle": "Code NAF",
+          "portee": "entreprise",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "47.11A",
+          "valeurNormalisee": "47.11A",
+          "colonneSource": "NAF",
+          "raison": "Valeur absente de la liste exclue"
+        },
+        {
+          "regleId": "r-poste-ne_contient_aucun",
+          "critereId": "poste",
+          "libelle": "Poste du décideur",
+          "portee": "contact",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "Co-founder",
+          "valeurNormalisee": "Co-founder",
+          "colonneSource": "Poste",
+          "raison": "Aucune expression exclue"
+        },
+        {
+          "regleId": "r-blacklist-pas_blackliste",
+          "critereId": "blacklist",
+          "libelle": "Entreprise absente de la liste d'exclusion",
+          "portee": "exclusion",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "absent",
+          "valeurNormalisee": "absent",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Entreprise absente de la liste d'exclusion"
+        },
+        {
+          "regleId": "r-doublon-unique",
+          "critereId": "doublon",
+          "libelle": "Contact unique",
+          "portee": "qualite",
+          "importance": "bloquant",
+          "statut": "Réussi",
+          "valeurBrute": "unique",
+          "valeurNormalisee": "unique",
+          "colonneSource": "Contrôle calculé",
+          "raison": "Contact unique"
+        }
+      ]
+    }
+  ]
+}

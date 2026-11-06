@@ -459,6 +459,7 @@ DEFINITIONS: dict[str, tuple[str | None, str, str]] = {
 # L'identifiant de l'opérateur, lui, ne change pas : c'est la clé du fichier de mission.
 LIBELLES_OPERATEURS = {
     "est_dans": "est dans la liste", "contient_un": "contient au moins un", "ne_contient_aucun": "ne contient aucun",
+    "n_est_pas_dans": "n'est pas dans la liste",
     "entre": "est compris entre", "present": "est renseigné", "email_professionnel": "est un email professionnel",
     "mobile_francais": "est un mobile français 06/07", "provenance_professionnelle": "indique une provenance professionnelle",
     "pas_blackliste": "n'est pas dans la liste d'exclusion", "unique": "n'est pas un doublon",
@@ -615,6 +616,32 @@ def empreinte_filtres(filtres: list) -> str:
     return empreinte_texte(filtres)
 
 
+def empreinte_regles(configuration: dict) -> str:
+    """Signature des règles : les règles, les champs obligatoires et les colonnes finales, par le même calcul que les autres.
+
+    Elle distingue une cible validée d'une cible dont une règle a été modifiée à la main. Jumelle de `calculerEmpreinteRegles`.
+    Une propriété optionnelle d'une règle (`motEntier`) n'y figure que sur les règles qui l'ont.
+    """
+    return empreinte_texte({
+        "regles": configuration["regles"], "champsObligatoires": configuration["champsObligatoires"], "colonnesFinales": configuration["colonnesFinales"],
+    })
+
+
+def origine_est_cible(configuration: dict) -> bool:
+    """Une mission d'origine « cible » : une cible validée par un humain, sans recherche chez un fournisseur."""
+    origine = configuration.get("origine")
+    return isinstance(origine, dict) and origine.get("type") == "cible"
+
+
+def cible_validee(configuration: dict) -> bool:
+    """La date de validation est renseignée et les règles n'ont pas changé depuis (signature recalculée égale)."""
+    if not origine_est_cible(configuration):
+        return False
+    origine = configuration["origine"]
+    date, signature = origine.get("valideeLe"), origine.get("empreinteRegles")
+    return isinstance(date, str) and rogner(date) != "" and isinstance(signature, str) and signature != "" and signature == empreinte_regles(configuration)
+
+
 def empreinte_recherche(configuration: dict) -> str:
     pharow = configuration["pharow"]
     return empreinte_texte({
@@ -718,13 +745,25 @@ def controler_prevol(configuration: dict, candidats_charges: int, blacklist_char
         return isinstance(valeur, dict) and est_fini(valeur.get("min")) and est_fini(valeur.get("max")) and valeur["min"] <= valeur["max"]
 
     intervalles = all(intervalle_valide(r) for r in regles if r.get("operateur") == "entre")
-    listes = all(isinstance(r.get("valeur"), list) and len(r["valeur"]) > 0 for r in regles if r.get("operateur") in ("est_dans", "contient_un", "ne_contient_aucun"))
+    listes = all(isinstance(r.get("valeur"), list) and len(r["valeur"]) > 0 for r in regles if r.get("operateur") in ("est_dans", "contient_un", "ne_contient_aucun", "n_est_pas_dans"))
     champs_regles = [DEFINITIONS[r["critereId"]][0] for r in regles if r.get("critereId") in DEFINITIONS and DEFINITIONS[r["critereId"]][0]]
-    mappings_complets = all(vrai(mapping.get(champ)) for champ in set(configuration["champsObligatoires"]) | set(champs_regles))
+    # Une mission d'origine « cible » vient d'un fichier importé, qui n'a pas toutes les colonnes : seuls les champs obligatoires doivent
+    # être reliés. Une règle dont la colonne manque suit sa politique `siAbsent` (voir `_evaluer_regle`).
+    cible = origine_est_cible(configuration)
+    champs_a_relier = set(configuration["champsObligatoires"]) if cible else set(configuration["champsObligatoires"]) | set(champs_regles)
+    mappings_complets = all(vrai(mapping.get(champ)) for champ in champs_a_relier)
     mapping_blacklist = any(vrai(v) for v in configuration["mappingBlacklist"].values())
     volume = reference.get("volumeAttendu", INDEFINI)
     volume_conforme = est_nombre(volume) and volume == blacklist_chargee
     empreinte_conforme = vrai(reference.get("empreinte")) and vrai(empreinte_bl) and reference.get("empreinte") == empreinte_bl
+    controle = lambda ident, libelle, valide, bloquant=True: {"id": ident, "libelle": libelle, "valide": bool(valide), "bloquant": bool(bloquant)}  # noqa: E731
+    controle_configuration = controle("configuration", "Règles, colonnes finales et correspondance des colonnes du fichier candidats complètes", len(regles) > 0 and ids_valides and intervalles and listes and len(configuration["colonnesFinales"]) > 0 and mappings_complets)
+    controle_blacklist = controle("blacklist", "Liste d'exclusion chargée et colonnes de correspondance définies", blacklist_chargee > 0 and mapping_blacklist, blacklist_requise)
+    controle_empreinte = controle("empreinte", "Volume et signature de la liste d'exclusion cohérents", blacklist_chargee > 0 and volume_conforme and empreinte_conforme, blacklist_requise)
+    controle_candidats = controle("candidats", "Fichier candidats prêt", candidats_charges > 0)
+    # Une mission d'origine « cible » : la recherche chez un fournisseur n'existe pas, ses sept contrôles laissent place à un seul.
+    if cible:
+        return [controle("cible_validee", "Cible validée et inchangée", cible_validee(configuration)), controle_configuration, controle_blacklist, controle_empreinte, controle_candidats]
     filtres = pharow["filtres"]
     filtres_valides = len(filtres) > 0 and all(vrai(f.get("id")) and rogner(f["recherche"]) and rogner(f["libelle"]) and len(f["valeurs"]) > 0 for f in filtres)
     export_conforme = vrai(pharow.get("exportBrutNom")) and vrai(pharow.get("exportCaptureLe")) and pharow.get("exportBrutVolume", INDEFINI) == candidats_charges and est_nombre(pharow.get("exportBrutVolume")) and candidats_charges > 0
@@ -744,19 +783,18 @@ def controler_prevol(configuration: dict, candidats_charges: int, blacklist_char
         return bool(champ and vrai(mapping.get(champ)))
 
     couverts = all(couvert(f) for f in filtres if vrai(f.get("obligatoire")))
-    controle = lambda ident, libelle, valide, bloquant=True: {"id": ident, "libelle": libelle, "valide": bool(valide), "bloquant": bool(bloquant)}  # noqa: E731
     return [
         controle("strategie", "Stratégie critère par critère validée et inchangée", strategie_validee(configuration["strategie"])),
         controle("recherche_validee", "Recherche réelle validée avec capture, volume, échantillon et limites", recherche_validee(configuration)),
-        controle("configuration", "Règles, colonnes finales et correspondance des colonnes du fichier candidats complètes", len(regles) > 0 and ids_valides and intervalles and listes and len(configuration["colonnesFinales"]) > 0 and mappings_complets),
-        controle("blacklist", "Liste d'exclusion chargée et colonnes de correspondance définies", blacklist_chargee > 0 and mapping_blacklist, blacklist_requise),
-        controle("empreinte", "Volume et signature de la liste d'exclusion cohérents", blacklist_chargee > 0 and volume_conforme and empreinte_conforme, blacklist_requise),
+        controle_configuration,
+        controle_blacklist,
+        controle_empreinte,
         controle("liste_pharow", "Bonne recherche et bonne liste d'exclusion Pharow renseignées", rogner(texte_js(pharow.get("nomRecherche"))) and rogner(texte_js(pharow.get("nomListeExclusion")))),
         controle("exclusion_pharow", "Exclusion confirmée active dans Pharow", vrai(pharow.get("exclusionConfirmeeLe"))),
         controle("export_source", "Export brut conservé et identifié dans le navigateur", export_conforme),
         controle("filtres", "Filtres définitifs recopiés après l'extraction, confirmés et inchangés", filtres_valides and saisis_apres and vrai(pharow.get("filtresConfirmesLe")) and empreinte_filtres_conforme),
         controle("couverture_filtres", "Chaque filtre obligatoire est relié à une règle et à sa preuve", couverts),
-        controle("candidats", "Fichier candidats prêt", candidats_charges > 0),
+        controle_candidats,
     ]
 
 
@@ -844,7 +882,16 @@ def _doublon(valeurs: dict, vus: dict, ligne: int) -> int | None:
     return None
 
 
-def _trouver_attendu(attendus: list[str], texte: str) -> str | None:
+def _trouver_attendu(attendus: list[str], texte: str, mot_entier: bool = False) -> str | None:
+    """La première expression attendue que le texte contient.
+
+    Par défaut : un mot de trois lettres ou moins se cherche comme un mot, les autres comme une suite de lettres. Avec `mot_entier`,
+    toute expression se cherche en mots entiers du texte normalisé (« make » n'est pas dans « makeup », mais dans « make com » :
+    le point a été normalisé en espace). Jumelle de `trouverExpression`.
+    """
+    if mot_entier:
+        enrobe = f" {texte} "
+        return next((attendu for attendu in attendus if f" {attendu} " in enrobe), None)
     mots = set(texte.split(" "))
     for attendu in attendus:
         if (len(attendu) <= 3 and " " not in attendu and attendu in mots) or ((len(attendu) > 3 or " " in attendu) and attendu in texte):
@@ -887,11 +934,14 @@ def _evaluer_valeur(regle: dict, champ: str | None, normalisee: Any, blacklist: 
     valeur = regle.get("valeur")
     attendus = [a for a in (normaliser_texte(v) for v in valeur) if a] if isinstance(valeur, list) else []
     if operateur == "contient_un":
-        trouve = _trouver_attendu(attendus, texte)
+        trouve = _trouver_attendu(attendus, texte, regle.get("motEntier") is True)
         return (trouve is not None, f"Correspondance : {trouve}" if trouve is not None else "Aucun mot-clé accepté")
     if operateur == "ne_contient_aucun":
-        trouve = _trouver_attendu(attendus, texte)
+        trouve = _trouver_attendu(attendus, texte, regle.get("motEntier") is True)
         return (trouve is None, f"Expression exclue : {trouve}" if trouve is not None else "Aucune expression exclue")
+    if operateur == "n_est_pas_dans":
+        trouve = next((attendu for attendu in attendus if texte == attendu), None)
+        return (trouve is None, f"Valeur exclue : {trouve}" if trouve is not None else "Valeur absente de la liste exclue")
     assistant = champ == "poste" and re.search(r"\b(assistant|assistante|chief of staff|bras droit)\b", texte) is not None
     trouve = None
     if not assistant:
@@ -1369,6 +1419,7 @@ def commande_prevol(args) -> int:
 ETIQUETTES_SIGNATURES = {
     "strategie": "Signature de la stratégie", "recherche": "Signature de la recherche", "filtres": "Signature des filtres",
     "erreurs_strategie": "Erreurs de la stratégie", "blacklist": "Signature de la liste d'exclusion", "blacklist_volume": "Lignes de la liste d'exclusion",
+    "regles": "Signature des règles",
 }
 
 
@@ -1382,6 +1433,8 @@ def commande_empreintes(args) -> int:
         "filtres": empreinte_filtres(configuration["pharow"]["filtres"]),
         "erreurs_strategie": erreurs_strategie(configuration["strategie"]),
     }
+    if origine_est_cible(configuration):  # la signature des règles n'existe que pour cette origine : les autres sorties restent celles d'avant
+        empreintes["regles"] = empreinte_regles(configuration)
     if args.exclusions:
         entetes, lignes = lire_tableau(args.exclusions)
         mapping = completer_mapping(configuration["mappingBlacklist"], entetes, ENTETES_BLACKLIST)

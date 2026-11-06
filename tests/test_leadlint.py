@@ -46,11 +46,14 @@ def rendu_b2b(entree: dict) -> dict:
     empreinte_bl = m.empreinte_blacklist(blacklist, configuration["mappingBlacklist"]) if blacklist else None
     controles = m.controler_prevol(configuration, len(candidats), len(blacklist), empreinte_bl)
     lignes = m.valider_export_b2b(candidats, blacklist, configuration)
+    empreintes = {
+        "strategie": m.empreinte_strategie(configuration["strategie"]), "recherche": m.empreinte_recherche(configuration),
+        "filtres": m.empreinte_filtres(configuration["pharow"]["filtres"]), "blacklist": empreinte_bl,
+    }
+    if (configuration.get("origine") or {}).get("type") == "cible":  # comme l'oracle : la signature des règles n'existe que pour cette origine
+        empreintes["regles"] = m.empreinte_regles(configuration)
     return {
-        "empreintes": {
-            "strategie": m.empreinte_strategie(configuration["strategie"]), "recherche": m.empreinte_recherche(configuration),
-            "filtres": m.empreinte_filtres(configuration["pharow"]["filtres"]), "blacklist": empreinte_bl,
-        },
+        "empreintes": empreintes,
         "prevol": {"autorise": m.prevol_autorise(controles), "controles": controles},
         "lignes": [{
             "numeroLigne": l["numeroLigne"], "statut": l["statut"], "cause": l["causePrincipale"]["critereId"] if l["causePrincipale"] else None,
@@ -78,7 +81,7 @@ def ecarts(attendu, obtenu, chemin="") -> list[str]:
     return [] if attendu == obtenu and type(attendu) is type(obtenu) else [f"{chemin} : {attendu!r} attendu, {obtenu!r} obtenu"]
 
 
-SCENARIOS_B2B = ["esn-validee", "esn-non-validee", "esn-filtre-modifie", "regles-variees"]
+SCENARIOS_B2B = ["esn-validee", "esn-non-validee", "esn-filtre-modifie", "regles-variees", "origine-cible", "origine-cible-non-validee", "origine-cible-modifiee"]
 
 
 class Parite(unittest.TestCase):
@@ -340,6 +343,304 @@ class MissionTelechargee(unittest.TestCase):
         self.assertFalse(prevol["autorise"])
         self.assertIn("strategie", refuses)
         self.assertLessEqual(refuses, {"strategie", "recherche_validee"}, "seul le verrou de la stratégie (et la recherche qui l'embarque) doit tomber")
+
+
+class OrigineCible(unittest.TestCase):
+    """Une mission d'origine « cible » : une cible validée par un humain, sans recherche chez un fournisseur.
+
+    Son contrôle avant lancement n'a que cinq contrôles, dont `cible_validee`. Les scénarios `b2b-origine-cible*` de l'oracle
+    prouvent que la page rend les mêmes verdicts ; ici, les cas un par un, puis la ligne de commande de bout en bout.
+    """
+
+    EXCLUSIONS = [{"Entreprise": "Entreprise Interdite SAS"}]
+    MAPPING_BLACKLIST = {"entreprise": "Entreprise"}
+
+    @staticmethod
+    def _regle(ident, critere, operateur, valeur, importance, si_absent, **extra) -> dict:
+        return {"id": ident, "critereId": critere, "operateur": operateur, "valeur": valeur, "importance": importance, "siAbsent": si_absent, "active": True, **extra}
+
+    def regles(self) -> list[dict]:
+        r = self._regle
+        return [
+            r("r-pays-est_dans", "pays", "est_dans", ["France"], "bloquant", "verifier"),
+            r("r-poste-est_dans", "poste", "est_dans", ["Gérant", "Fondateur"], "bloquant", "verifier"),
+            r("r-activite-ne_contient_aucun", "activite", "ne_contient_aucun", ["Make", "freelance"], "bloquant", "ignorer", motEntier=True),
+            r("r-code_naf-n_est_pas_dans", "code_naf", "n_est_pas_dans", ["62.02A", "6202A", "70.22Z", "7022Z"], "bloquant", "ignorer"),
+            r("r-poste-ne_contient_aucun", "poste", "ne_contient_aucun", ["freelance", "consultant", "open to work"], "bloquant", "ignorer", motEntier=True),
+            r("r-blacklist-pas_blackliste", "blacklist", "pas_blackliste", True, "bloquant", "rejeter"),
+            r("r-doublon-unique", "doublon", "unique", True, "bloquant", "rejeter"),
+        ]
+
+    def mission(self, validee_le="2026-11-06T09:00:00.000Z", regles=None) -> dict:
+        configuration = {
+            "mode": "revalidation_b2b", "schemaVersion": 2, "regles": regles if regles is not None else self.regles(),
+            "champsObligatoires": ["nomComplet", "entreprise", "linkedinProfil"],
+            "colonnesFinales": [{"champ": "nomComplet", "libelle": "Nom complet"}, {"champ": "entreprise", "libelle": "Entreprise"},
+                                {"champ": "poste", "libelle": "Poste"}, {"champ": "linkedinProfil", "libelle": "LinkedIn profil"}],
+            "mappingCandidats": {"nomComplet": "Nom complet", "entreprise": "Entreprise", "poste": "Poste", "linkedinProfil": "LinkedIn profil",
+                                 "pays": "Pays", "codeNaf": "Code NAF", "activite": "Activité"},
+            "mappingBlacklist": dict(self.MAPPING_BLACKLIST),
+            "blacklist": {"obligatoire": True, "nom": "Clients et affaires en cours", "typeSource": "fichier",
+                          "volumeAttendu": len(self.EXCLUSIONS), "empreinte": m.empreinte_blacklist(self.EXCLUSIONS, self.MAPPING_BLACKLIST)},
+            "strategie": {"lignes": [], "limites": ""},
+            "pharow": {"nomRecherche": "", "nomListeExclusion": "", "filtres": [], "echantillonTemoins": []},
+        }
+        configuration["origine"] = {"type": "cible", "empreinteCible": "a" * 64, "empreinteRegles": m.empreinte_regles(configuration)}
+        if validee_le:
+            configuration["origine"]["valideeLe"] = validee_le
+        return configuration
+
+    def controles(self, configuration, candidats=1) -> list[dict]:
+        configuration = m.migrer_configuration_b2b(copy.deepcopy(configuration))
+        return m.controler_prevol(configuration, candidats, len(self.EXCLUSIONS), m.empreinte_blacklist(self.EXCLUSIONS, configuration["mappingBlacklist"]))
+
+    def refuses(self, configuration) -> list[str]:
+        return [c["id"] for c in self.controles(configuration) if c["bloquant"] and not c["valide"]]
+
+    @staticmethod
+    def candidat(n=1, **surcharge) -> dict:
+        ligne = {"Nom complet": f"Camille Exemple {n}", "Entreprise": f"Nuage {n}", "Poste": "Gérant",
+                 "LinkedIn profil": f"https://www.linkedin.com/in/exemple-fictif-{n}", "Pays": "France", "Code NAF": "62.01Z",
+                 "Activité": "Éditeur de logiciel de gestion"}
+        ligne.update(surcharge)
+        return ligne
+
+    def verdict(self, ligne: dict, regles=None) -> tuple:
+        configuration = m.migrer_configuration_b2b(self.mission("2026-11-06", regles))
+        resultat = m.valider_export_b2b([ligne], self.EXCLUSIONS, configuration)[0]
+        cause = resultat["causePrincipale"]
+        return resultat["statut"], cause["critereId"] if cause else None, cause["regleId"] if cause else None
+
+    def sans_poste_accepte(self) -> list[dict]:
+        return [r for r in self.regles() if r["id"] != "r-poste-est_dans"]
+
+    # ---- le contrôle avant lancement
+    def test_cinq_controles_seulement(self):
+        controles = self.controles(self.mission())
+        self.assertEqual([c["id"] for c in controles], ["cible_validee", "configuration", "blacklist", "empreinte", "candidats"])
+        self.assertTrue(all(c["bloquant"] for c in controles))
+        self.assertEqual(controles[0]["libelle"], "Cible validée et inchangée")
+        for controle in controles:
+            self.assertNotRegex(controle["libelle"], MOTS_INTERDITS, controle["libelle"])
+
+    def test_une_cible_validee_et_inchangee_passe(self):
+        controles = self.controles(self.mission())
+        self.assertEqual([c for c in controles if not c["valide"]], [])
+        self.assertTrue(m.prevol_autorise(controles))
+
+    def test_une_cible_jamais_validee_est_bloquee(self):
+        configuration = self.mission(validee_le=None)
+        self.assertEqual(self.refuses(configuration), ["cible_validee"])
+        self.assertFalse(m.prevol_autorise(self.controles(configuration)))
+        configuration["origine"]["valideeLe"] = "   "
+        self.assertEqual(self.refuses(configuration), ["cible_validee"])
+
+    def test_une_regle_modifiee_a_la_main_est_bloquee_quelle_que_soit_la_modification(self):
+        def elargir(c): c["regles"][0]["valeur"] = ["France", "Belgique"]
+        def adoucir(c): c["regles"][0]["importance"] = "verification"
+        def politique(c): c["regles"][0]["siAbsent"] = "ignorer"
+        def desactiver(c): c["regles"][1]["active"] = False
+        def retirer(c): del c["regles"][1]
+        def mot_entier(c): del c["regles"][2]["motEntier"]
+        def obligatoire(c): c["champsObligatoires"] = ["nomComplet", "entreprise"]
+        def colonne(c): c["colonnesFinales"] = c["colonnesFinales"][:2]
+        for modifier in (elargir, adoucir, politique, desactiver, retirer, mot_entier, obligatoire, colonne):
+            with self.subTest(modification=modifier.__name__):
+                configuration = self.mission()
+                modifier(configuration)
+                self.assertEqual(self.refuses(configuration), ["cible_validee"])
+
+    def test_la_signature_des_regles_est_exigee_et_doit_etre_juste(self):
+        sans = self.mission()
+        del sans["origine"]["empreinteRegles"]
+        self.assertEqual(self.refuses(sans), ["cible_validee"])
+        fausse = self.mission()
+        fausse["origine"]["empreinteRegles"] = "fnv1a-00000000"
+        self.assertEqual(self.refuses(fausse), ["cible_validee"])
+
+    def test_ni_la_strategie_ni_les_filtres_ne_comptent(self):
+        configuration = self.mission()
+        configuration["strategie"] = {"lignes": [], "limites": "autre texte", "valideeLe": "2020-01-01"}
+        configuration["pharow"]["nomRecherche"] = "Une recherche"
+        self.assertEqual(self.refuses(configuration), [])
+
+    def test_la_liste_d_exclusion_et_le_fichier_restent_exiges(self):
+        configuration = m.migrer_configuration_b2b(self.mission())
+        sans_liste = m.controler_prevol(configuration, 1, 0, None)
+        self.assertEqual([c["id"] for c in sans_liste if c["bloquant"] and not c["valide"]], ["blacklist", "empreinte"])
+        sans_fichier = m.controler_prevol(configuration, 0, 1, configuration["blacklist"]["empreinte"])
+        self.assertEqual([c["id"] for c in sans_fichier if c["bloquant"] and not c["valide"]], ["candidats"])
+        autre = m.controler_prevol(configuration, 1, 1, "fnv1a-00000000")
+        self.assertEqual([c["id"] for c in autre if c["bloquant"] and not c["valide"]], ["empreinte"])
+
+    def test_seule_la_correspondance_des_champs_obligatoires_est_exigee(self):
+        configuration = self.mission()
+        del configuration["mappingCandidats"]["codeNaf"], configuration["mappingCandidats"]["activite"]
+        self.assertEqual(self.refuses(configuration), [])
+        del configuration["mappingCandidats"]["entreprise"]
+        self.assertEqual(self.refuses(configuration), ["configuration"])
+
+    def test_sans_origine_rien_ne_change(self):
+        entree = lire("b2b-esn-validee.entree.json")
+        configuration = m.migrer_configuration_b2b(copy.deepcopy(entree["configuration"]))
+        self.assertNotIn("origine", configuration)
+        controles = m.controler_prevol(configuration, len(entree["candidats"]), len(entree["blacklist"]), m.empreinte_blacklist(entree["blacklist"], configuration["mappingBlacklist"]))
+        self.assertEqual([c["id"] for c in controles], ["strategie", "recherche_validee", "configuration", "blacklist", "empreinte", "liste_pharow", "exclusion_pharow", "export_source", "filtres", "couverture_filtres", "candidats"])
+        autre = copy.deepcopy(configuration)
+        autre["origine"] = {"type": "import", "valideeLe": "2026-11-06"}
+        self.assertEqual(len(m.controler_prevol(autre, 1, 1, "x")), 11)
+
+    # ---- la signature des règles
+    def test_la_signature_se_calcule_sur_trois_blocs_et_ne_voit_rien_d_autre(self):
+        configuration = self.mission()
+        attendu = m.empreinte_texte({"regles": configuration["regles"], "champsObligatoires": configuration["champsObligatoires"], "colonnesFinales": configuration["colonnesFinales"]})
+        self.assertEqual(m.empreinte_regles(configuration), attendu)
+        self.assertRegex(attendu, r"^fnv1a-[0-9a-f]{8}$")
+        autre = self.mission()
+        autre["strategie"]["limites"], autre["pharow"]["nomRecherche"], autre["blacklist"]["nom"] = "autre", "autre", "autre"
+        autre["origine"]["valideeLe"] = "2030-01-01"
+        self.assertEqual(m.empreinte_regles(autre), attendu)
+        autre["regles"][0]["valeur"] = ["France", "Suisse"]
+        self.assertNotEqual(m.empreinte_regles(autre), attendu)
+
+    def test_le_mot_entier_n_entre_pas_dans_la_signature_d_une_regle_qui_ne_l_a_pas(self):
+        sans = self.mission(regles=[self._regle("r", "poste", "contient_un", ["CEO"], "bloquant", "verifier")])
+        avec = self.mission(regles=[self._regle("r", "poste", "contient_un", ["CEO"], "bloquant", "verifier", motEntier=True)])
+        self.assertNotIn("motEntier", json.dumps(sans["regles"]))
+        self.assertNotEqual(m.empreinte_regles(avec), m.empreinte_regles(sans))
+
+    # ---- l'origine se conserve
+    def test_la_migration_garde_l_origine_et_ne_l_ajoute_pas_aux_autres(self):
+        configuration = self.mission()
+        migree = m.migrer_configuration_b2b(json.loads(json.dumps(configuration)))
+        self.assertEqual(migree["origine"], configuration["origine"])
+        self.assertEqual(m.empreinte_regles(migree), configuration["origine"]["empreinteRegles"])
+        self.assertEqual(self.refuses(migree), [])
+        self.assertNotIn("origine", m.migrer_configuration_b2b(lire("b2b-ancienne.entree.json")["configuration"]))
+        self.assertNotIn("origine", m.migrer_configuration_b2b(copy.deepcopy(lire("b2b-esn-validee.entree.json")["configuration"])))
+
+    # ---- les négatifs
+    def test_n_est_pas_dans_ecarte_un_code_naf_liste_sous_ses_deux_ecritures(self):
+        for naf in ("62.02A", "6202A", "62.02a", " 6202a ", "70.22Z"):
+            with self.subTest(naf=naf):
+                self.assertEqual(self.verdict(self.candidat(**{"Code NAF": naf})), ("Rejeté", "code_naf", "r-code_naf-n_est_pas_dans"))
+
+    def test_n_est_pas_dans_laisse_passer_un_autre_code_ou_aucun_code(self):
+        self.assertEqual(self.verdict(self.candidat(**{"Code NAF": "62.01Z"}))[0], "Conforme")
+        self.assertEqual(self.verdict(self.candidat(**{"Code NAF": "62.02B"}))[0], "Conforme")  # égalité, pas préfixe
+        self.assertEqual(self.verdict(self.candidat(**{"Code NAF": ""}))[0], "Conforme")
+
+    def test_n_est_pas_dans_suit_sa_politique_quand_le_code_manque(self):
+        for si_absent, attendu in (("verifier", "À vérifier"), ("rejeter", "Rejeté"), ("ignorer", "Conforme")):
+            with self.subTest(si_absent=si_absent):
+                regles = self.regles()
+                regles[3]["siAbsent"] = si_absent
+                self.assertEqual(self.verdict(self.candidat(**{"Code NAF": ""}), regles)[0], attendu)
+
+    def test_ne_contient_aucun_sur_le_poste(self):
+        for poste in ("Freelance", "Consultant en systèmes", "Gérant | Open to Work", "OPEN TO WORK", "Directeur freelance IT"):
+            with self.subTest(poste=poste):
+                self.assertEqual(self.verdict(self.candidat(Poste=poste), self.sans_poste_accepte()), ("Rejeté", "poste", "r-poste-ne_contient_aucun"))
+        self.assertEqual(self.verdict(self.candidat(Poste="Gérant"), self.sans_poste_accepte())[0], "Conforme")
+        self.assertEqual(self.verdict(self.candidat(Poste=""), self.sans_poste_accepte())[0], "Conforme")  # si absent : ignorer
+
+    def test_sans_la_regle_le_freelance_passe(self):
+        regles = [dict(r, active=False) if r["id"] == "r-poste-ne_contient_aucun" else r for r in self.sans_poste_accepte()]
+        self.assertEqual(self.verdict(self.candidat(Poste="Freelance"), regles)[0], "Conforme")
+
+    def test_le_libelle_du_nouvel_operateur_est_en_francais_courant(self):
+        self.assertEqual(m.LIBELLES_OPERATEURS["n_est_pas_dans"], "n'est pas dans la liste")
+        self.assertNotRegex(m.LIBELLES_OPERATEURS["n_est_pas_dans"], MOTS_INTERDITS)
+
+    # ---- le mot entier
+    def _statut_activite(self, activite, mot_entier, operateur="ne_contient_aucun", mots=("Make",)) -> str:
+        extra = {} if mot_entier is None else {"motEntier": mot_entier}
+        regles = [self._regle("r-activite", "activite", operateur, list(mots), "bloquant", "verifier", **extra),
+                  self._regle("r-blacklist-pas_blackliste", "blacklist", "pas_blackliste", True, "bloquant", "rejeter")]
+        return self.verdict(self.candidat(**{"Activité": activite}), regles)[0]
+
+    def test_mot_entier_make_n_ecarte_plus_makeup(self):
+        self.assertEqual(self._statut_activite("Salon de makeup et beauté", True), "Conforme")
+        self.assertEqual(self._statut_activite("Automatisations make.com", True), "Rejeté")
+        self.assertEqual(self._statut_activite("Agence Make", True), "Rejeté")
+        self.assertEqual(self._statut_activite("make", True), "Rejeté")
+        self.assertEqual(self._statut_activite("Make-up artist", True), "Rejeté")
+
+    def test_sans_la_propriete_le_comportement_est_inchange(self):
+        self.assertEqual(self._statut_activite("Salon de makeup et beauté", None), "Rejeté")
+        self.assertEqual(self._statut_activite("Salon de makeup et beauté", False), "Rejeté")
+
+    def test_mot_entier_compare_une_expression_entiere_sur_le_texte_normalise(self):
+        self.assertEqual(self._statut_activite("Recherche d'emploi en cours", True, mots=("recherche d'emploi",)), "Rejeté")
+        self.assertEqual(self._statut_activite("Recherche d'emplois variés", True, mots=("recherche d'emploi",)), "Conforme")
+        self.assertEqual(self._statut_activite("Self-Employed", True, mots=("self employed",)), "Rejeté")
+
+    def test_contient_un_lit_aussi_la_propriete(self):
+        self.assertEqual(self._statut_activite("Salon de makeup", True, "contient_un"), "Rejeté")
+        self.assertEqual(self._statut_activite("Agence make", True, "contient_un"), "Conforme")
+        self.assertEqual(self._statut_activite("Salon de makeup", None, "contient_un"), "Conforme")
+
+    # ---- la ligne de commande, de bout en bout
+    def preparer(self, **options) -> tuple[Path, Path, Path, Path]:
+        dossier = Path(tempfile.mkdtemp(prefix="leadlint-"))
+        export, exclusions, mission = dossier / "export.csv", dossier / "exclusions.csv", dossier / "mission.json"
+        ecrire_csv(export, [
+            self.candidat(1),                                                  # 2 conforme
+            self.candidat(2, **{"Code NAF": "62.02A"}),                        # 3 rejeté : NAF prestataire
+            self.candidat(3, Activité="Agence make.com"),                      # 4 rejeté : mot exclu
+            self.candidat(4, Poste="Gérant | Open to Work"),                   # 5 rejeté : open to work
+            self.candidat(5, Activité="Salon de makeup"),                      # 6 conforme : « makeup » n'est pas « make »
+            self.candidat(6, Entreprise="Entreprise Interdite SAS"),           # 7 rejeté : liste d'exclusion
+        ], ",")
+        ecrire_csv(exclusions, self.EXCLUSIONS, ",")
+        configuration = self.mission(**options)
+        mission.write_text(json.dumps({"client": "Client fictif", "mission": "Cible fictive", "configuration": configuration}, ensure_ascii=False), encoding="utf-8")
+        return dossier, export, exclusions, mission
+
+    def test_check_livre_les_conformes_sans_diagnostic(self):
+        dossier, export, exclusions, mission = self.preparer()
+        code, sortie = lancer("check", str(export), "--mission", str(mission), "--exclusions", str(exclusions), "--json", "--lignes")
+        self.assertEqual(code, 0, sortie)
+        bilan = json.loads(sortie)
+        self.assertTrue(bilan["livre"] and not bilan["diagnostic"] and bilan["prevol"]["autorise"])
+        self.assertEqual([c["id"] for c in bilan["prevol"]["controles"]], ["cible_validee", "configuration", "blacklist", "empreinte", "candidats"])
+        self.assertEqual([l["statut"] for l in bilan["lignes"]], ["Conforme", "Rejeté", "Rejeté", "Rejeté", "Conforme", "Rejeté"])
+        self.assertEqual(set(bilan["fichiers"]), {"controle_qa", "conformes"})
+        self.assertTrue((dossier / "export-conformes.xlsx").is_file())
+        import openpyxl
+        conformes = openpyxl.load_workbook(bilan["fichiers"]["conformes"])["Conformes"]
+        self.assertEqual(conformes.max_row - 1, 2)
+
+    def test_check_bloque_une_cible_non_validee_ou_modifiee_et_ne_livre_rien(self):
+        for options, modification in (({"validee_le": None}, None), ({}, "modifiee")):
+            with self.subTest(options=options, modification=modification):
+                dossier, export, exclusions, mission = self.preparer(**options)
+                if modification:
+                    brut = json.loads(mission.read_text(encoding="utf-8"))
+                    brut["configuration"]["regles"][0]["valeur"] = ["France", "Belgique"]
+                    mission.write_text(json.dumps(brut, ensure_ascii=False), encoding="utf-8")
+                code, sortie = lancer("check", str(export), "--mission", str(mission), "--exclusions", str(exclusions), "--json")
+                self.assertEqual(code, 2)
+                self.assertFalse(json.loads(sortie)["livre"])
+                self.assertEqual(sorted(p.name for p in dossier.glob("*.xlsx")), [])
+                code, sortie = lancer("preflight", str(export), "--mission", str(mission), "--exclusions", str(exclusions), "--json")
+                refuses = [c["id"] for c in json.loads(sortie)["prevol"]["controles"] if c["bloquant"] and not c["valide"]]
+                self.assertEqual((code, refuses), (2, ["cible_validee"]))
+
+    def test_fingerprints_donne_la_signature_des_regles_pour_cette_origine_seulement(self):
+        dossier, export, exclusions, mission = self.preparer()
+        code, sortie = lancer("fingerprints", "--mission", str(mission), "--exclusions", str(exclusions), "--json")
+        self.assertEqual(code, 0, sortie)
+        obtenu = json.loads(sortie)
+        self.assertEqual(obtenu["regles"], self.mission()["origine"]["empreinteRegles"])
+        self.assertEqual(obtenu["blacklist"], self.mission()["blacklist"]["empreinte"])
+        code, texte = lancer("fingerprints", "--mission", str(mission), "--exclusions", str(exclusions))
+        self.assertIn(f"Signature des règles : {obtenu['regles']}", texte)
+        # une mission d'un fournisseur : la sortie est celle d'avant, sans clé de plus
+        dossier2, _, exclusions2, mission2 = preparer_mission("esn-validee")
+        code, sortie = lancer("fingerprints", "--mission", str(mission2), "--exclusions", str(exclusions2), "--json")
+        self.assertEqual(sorted(json.loads(sortie)), sorted(["outil", "version", "commande", "mission", "strategie", "recherche", "filtres", "erreurs_strategie", "blacklist", "blacklist_volume"]))
+        self.assertNotIn("Signature des règles", lancer("fingerprints", "--mission", str(mission2))[1])
 
 
 def cellules_du_classeur(chemin: str) -> dict:

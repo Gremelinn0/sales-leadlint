@@ -45,11 +45,11 @@ Older names still work, as exact aliases (same result, same exit code), though `
 
 ## Rules for an agent
 
-1. **Run `preflight` first.** If it blocks, do not work around it: report the failing controls to the human who validates the mission. The search strategy, the real search and the exclusion list are validated by a human, never by the agent: the validation date and the fingerprint (`leadlint fingerprints`) are written into the mission only on their explicit agreement.
+1. **Run `preflight` first.** If it blocks, do not work around it: report the failing controls to the human who validates the mission. The search strategy, the real search and the exclusion list are validated by a human, never by the agent: the validation date and the fingerprint (`leadlint fingerprints`) are written into the mission only on their explicit agreement. The same holds for a target: `origine.valideeLe` of a mission of origin `cible` is written only on the human's explicit agreement.
 2. **`--diagnostic`** returns the verdicts even when the preflight blocks, to understand a list; the file it produces carries `-diagnostic-` in its name and **no compliant file is written**. A diagnostic is never delivered.
 3. **After `check`, copy the bilan as is**: total, compliant, to review, rejected, and every non-zero main cause. Verify `invariants`: `total = compliant + to review + rejected` and `to review + rejected = sum of the causes`.
 4. **Only the `À vérifier` lines go to human review or to business QA**, with their cause. Rejected lines are not silently rescued; compliant lines are in `<export>-conformes.xlsx`, with the mission's columns and in its order.
-5. **Never edit the mission to make a list pass.** The preflight sees a changed strategy, search, filter set or exclusion list (their fingerprints), but **not a changed rule**: the rules (`regles`), the mandatory fields and the final columns carry no fingerprint yet. Widening a country, disabling the job-title rule or softening a rule's importance passes the preflight and adds compliant lines (measured on the example: 15 becomes 16 or 17). Any change to them goes back to the human who validates the mission.
+5. **Never edit the mission to make a list pass.** The preflight sees a changed strategy, search, filter set or exclusion list (their fingerprints), but, **for a mission with no `origine`, not a changed rule**: the rules (`regles`), the mandatory fields and the final columns carry no fingerprint. Widening a country, disabling the job-title rule or softening a rule's importance passes the preflight and adds compliant lines (measured on the example: 15 becomes 16 or 17). Any change to them goes back to the human who validates the mission. **A mission of origin `cible` is the exception**: it carries a fingerprint of its rules (`origine.empreinteRegles`, shown by `leadlint fingerprints` as `regles`), and the control `cible_validee` blocks it as soon as one rule, mandatory field or final column differs from the validated one, or when `valideeLe` is missing.
 
 ## What `check` returns
 
@@ -61,6 +61,8 @@ Older names still work, as exact aliases (same result, same exit code), though `
 
 The same JSON the web page saves: a setup (`client`, `mission`, `configuration`) or a configuration alone. It holds the rules (criterion, operator, values, importance, policy when the data is missing), the mandatory fields, the final columns, the column matching, the exclusion list reference, the search strategy and the filters really used. It never contains the export, the exclusion lines or a secret.
 
+A mission may instead come from a **target validated by a human** (`configuration.origine.type = "cible"`), for an imported file with no search at a supplier: its preflight has five controls instead of eleven, the supplier controls being replaced by `cible_validee`. See [references/format-mission.md](references/format-mission.md).
+
 Examples in `exemples/`: `mission-esn-11-50-validee.json` (passes the preflight on `export-exemple.csv`) and `modele-mission-esn-11-50.json` (a template to adapt; it blocks until something is validated). Detail of the criteria, operators and controls: [references/format-mission.md](references/format-mission.md).
 
 ## How it classifies (`check`)
@@ -69,7 +71,8 @@ Examples in `exemples/`: `mission-esn-11-50-validee.json` (passes the preflight 
 - Values are normalized before comparison: accents and punctuation, LinkedIn URL, domain, SIREN, French mobile 06/07, email, numbers written the French way.
 - Exclusion list: matched by company LinkedIn URL, then domain, SIREN, normalized name (legal forms removed).
 - Duplicates: same LinkedIn profile, same email, same mobile, or same name in the same company.
-- A keyword of three letters or fewer counts only as a whole word (« IT » is not found in « efficacité »).
+- A keyword of three letters or fewer counts only as a whole word (« IT » is not found in « efficacité »). A rule with `motEntier: true` applies that to every keyword: « Make » no longer finds « makeup », but still finds « make.com ».
+- Two negatives exist beside `est_dans`: `ne_contient_aucun` on the job title (a contact whose title holds one of the words is refused, for example freelance or open to work) and `n_est_pas_dans` on the NAF code (a listed code is refused).
 
 ## Proof
 
