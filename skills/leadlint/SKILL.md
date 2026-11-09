@@ -18,7 +18,7 @@ A linter for B2B lead lists, built for AI agents. A local Python script that doe
 1. **`personas`**: classifies each job title (department, seniority, inferred buying role) with a keyword matrix.
 2. **`check`** (French alias `b2b`): revalidates a prospecting export against the **mission** (a JSON file): every line comes out `Conforme`, `À vérifier` or `Rejeté`, with one main cause and the detail of every control.
 
-Python 3.9+ and `openpyxl`. No network call. Verdicts, report lines, JSON keys and workbook labels are in French on purpose (the engine is shared with the French web page); read them as they are.
+Python 3.9+ and `openpyxl`. No network call, except the `hubspot` command (below), which talks only to the HubSpot API. Verdicts, report lines, JSON keys and workbook labels are in French on purpose (the engine is shared with the French web page); read them as they are.
 
 ## When to use it
 
@@ -65,6 +65,23 @@ Older names still work, as exact aliases (same result, same exit code), though `
 - `<export>-conformes.xlsx`: only the compliant lines, ready to deliver.
 - Any cell that would start like a spreadsheet formula (`=`, `+`, `-`, `@`) is neutralized.
 
+## HubSpot: write the verdict on the contacts
+
+LeadLint computes outside HubSpot and writes five `leadlint_*` properties on contacts; HubSpot then acts through its own lists and workflows. It touches no other property. The key (a HubSpot service key) is read from `HUBSPOT_TOKEN`, never printed, never written to a file.
+
+```bash
+python scripts/leadlint.py hubspot setup          # creates the group and the properties, safe to repeat
+python scripts/leadlint.py hubspot sync --mission mission.json --exclusions exclusions.csv --dry-run
+python scripts/leadlint.py hubspot sync --mission mission.json --exclusions exclusions.csv
+python scripts/leadlint.py hubspot sync --personas   # job titles only: segment and level, no verdict
+```
+
+- Properties: `leadlint_segment`, `leadlint_niveau`, `leadlint_verdict` (`Conforme` / `A verifier` / `Rejete`), `leadlint_raison`, `leadlint_date`. `--champ codeNaf=my_property` links a mission field to another contact property.
+- `sync` reads the contacts modified since the last pass, classifies them with the engine of `check` (or `personas`) and writes, 100 per call, only the contacts whose `leadlint_*` value changes. The date of the last pass sits in `--etat` (default `./leadlint-hubspot-etat.json`), saved only after a successful pass; `--tout` forces a full pass, and a changed mission or matrix triggers one.
+- 429 and 5xx are retried with growing waits (`Retry-After` respected). Past the 10,000-result cap of a search, the read restarts from the last modification date seen.
+- The mission must pass the preflight: use a mission of origin `cible`. Duplicates cannot be judged one page at a time, so that rule is skipped and the pass says so.
+- Not verified against a live HubSpot account: start with `--dry-run` on a test portal.
+
 ## The mission file
 
 The same JSON the web page saves: a setup (`client`, `mission`, `configuration`) or a configuration alone. It holds the rules (criterion, operator, values, importance, policy when the data is missing), the mandatory fields, the final columns, the column matching, the exclusion list reference, the search strategy and the filters really used. It never contains the export, the exclusion lines or a secret.
@@ -84,4 +101,4 @@ Examples in `exemples/`: `mission-esn-11-50-validee.json` (passes the preflight 
 
 ## Proof
 
-`python tests/test_leadlint.py` (from the repository root): field-by-field parity with the web page's engine on scenarios rendered by that engine, the command line end to end, each older name equal to its current one, a check that nothing a person reads (labels, reasons, workbook, command-line output, `--help`) uses the old vocabulary, and negative controls that require the suite to see a deliberate deviation.
+`python tests/test_hubspot.py` plays the HubSpot command against a fake local HubSpot (setup, pagination, writes of changes only, 429 retry, the 10,000 cap, dry run). `python tests/test_leadlint.py` (from the repository root): field-by-field parity with the web page's engine on scenarios rendered by that engine, the command line end to end, each older name equal to its current one, a check that nothing a person reads (labels, reasons, workbook, command-line output, `--help`) uses the old vocabulary, and negative controls that require the suite to see a deliberate deviation.

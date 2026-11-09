@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """leadlint: a linter for B2B lead lists, built for AI agents. Local and deterministic.
 
-Four commands:
+Five commands:
 
   personas      sorts a column of job titles with a matrix
                 (department, seniority, inferred buying role).
@@ -11,6 +11,8 @@ Four commands:
   preflight     says only whether the mission may run, control by control.
   fingerprints  computes the fingerprints the mission memorises
                 (strategy, search, filters, exclusion list).
+  hubspot       `setup` creates the leadlint_* properties on HubSpot contacts; `sync` classifies the contacts
+                modified since the last pass and writes only the values that change (see the section HubSpot).
 
 Examples:
 
@@ -20,7 +22,8 @@ Examples:
 
 The mission file is the one the web page saves (https://zerogravity.builders/outils/segmentation):
 a JSON configuration, or a full setup that contains it. Nothing leaves the machine: no network
-call, no data sent.
+call, no data sent. The only exception is the `hubspot` command, which talks to the HubSpot API and
+to nothing else, with the token read from the HUBSPOT_TOKEN environment variable.
 
 Exit codes: 0 done (both bilan invariants hold) · 2 preflight blocked (nothing is delivered) ·
 1 unreadable input or wrong bilan.
@@ -34,14 +37,19 @@ French on purpose: they are the web page's.
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import datetime as dt
 import io
 import json
 import math
+import os
 import re
 import sys
+import time
 import unicodedata
+import urllib.error
+import urllib.request
 import uuid
 from collections import Counter, OrderedDict
 from pathlib import Path
@@ -1491,6 +1499,476 @@ def commande_personas(args) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------- HubSpot : propriétés et synchronisation
+#
+# LeadLint calcule hors de HubSpot et n'écrit que des propriétés `leadlint_*` sur les fiches de contact ; HubSpot agit ensuite par ses
+# listes et ses workflows. Deux commandes : `hubspot setup` (crée le groupe et les propriétés, sans rien écraser) et `hubspot sync`
+# (relit les contacts modifiés depuis le dernier passage, les classe avec le moteur ci-dessus, n'écrit que ce qui change).
+# Bibliothèque standard seulement. La clé est lue dans HUBSPOT_TOKEN, jamais affichée, jamais écrite.
+
+URL_HUBSPOT = "https://api.hubapi.com"
+GROUPE_HUBSPOT = "leadlint"
+VERDICTS_HUBSPOT = {"Conforme": "Conforme", "À vérifier": "A verifier", "Rejeté": "Rejete"}
+CHAMPS_ECRITS_HUBSPOT = ("leadlint_segment", "leadlint_niveau", "leadlint_verdict", "leadlint_raison")
+TAILLE_PAGE_HUBSPOT = 100          # fiches par page de recherche, et par appel d'écriture
+PLAFOND_RECHERCHE_HUBSPOT = 10_000  # résultats au plus par recherche : la page suivante est refusée
+ESSAIS_HUBSPOT = 6
+ATTENTE_MAX_HUBSPOT = 120.0        # secondes ; au-delà d'un Retry-After plus long, on s'arrête avec un message
+PAUSE_RECHERCHE_HUBSPOT = 0.2      # la recherche est limitée à 5 appels par seconde
+RECOUVREMENT_HUBSPOT = 120         # secondes relues avant le dernier passage : une fiche modifiée pendant le passage n'est pas perdue
+FICHIER_ETAT_HUBSPOT = "leadlint-hubspot-etat.json"
+EPOCH = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+
+# Champ de LeadLint -> propriété de contact HubSpot. Modifiable avec --champ champ=propriete.
+CORRESPONDANCE_HUBSPOT: "OrderedDict[str, str]" = OrderedDict([
+    ("poste", "jobtitle"), ("emailProfessionnel", "email"), ("mobile", "mobilephone"), ("entreprise", "company"), ("pays", "country"),
+    ("siteEntreprise", "website"), ("linkedinProfil", "hs_linkedin_url"), ("activite", "industry"),
+    ("employesVisibles", "numemployees"), ("chiffreAffaires", "annualrevenue"),
+])
+NOM_COMPLET_HUBSPOT = "__nom_complet"  # clé interne : prénom et nom, assemblés ici
+
+
+def _option(valeur: str, etiquette: str, ordre: int) -> dict:
+    return {"label": etiquette, "value": valeur, "displayOrder": ordre, "hidden": False}
+
+
+def proprietes_hubspot() -> list[dict]:
+    """Les cinq propriétés de contact du groupe leadlint."""
+    def texte(nom: str, etiquette: str, description: str) -> dict:
+        return {"name": nom, "label": etiquette, "description": description, "groupName": GROUPE_HUBSPOT, "type": "string", "fieldType": "text"}
+    return [
+        texte("leadlint_segment", "LeadLint segment", "Segment retenu par LeadLint (département du poste, ou cible de la mission)."),
+        texte("leadlint_niveau", "LeadLint niveau", "Niveau hiérarchique déduit du poste."),
+        {
+            "name": "leadlint_verdict", "label": "LeadLint verdict", "description": "Verdict de LeadLint pour la mission appliquée.",
+            "groupName": GROUPE_HUBSPOT, "type": "enumeration", "fieldType": "select",
+            "options": [_option("Conforme", "Conforme", 0), _option("A verifier", "À vérifier", 1), _option("Rejete", "Rejeté", 2)],
+        },
+        texte("leadlint_raison", "LeadLint raison", "Cause principale du verdict."),
+        {"name": "leadlint_date", "label": "LeadLint date", "description": "Dernière écriture de LeadLint sur cette fiche.",
+         "groupName": GROUPE_HUBSPOT, "type": "datetime", "fieldType": "date"},
+    ]
+
+
+class ErreurHubSpot(ErreurEntree):
+    """Une erreur de HubSpot ou du réseau. Le message ne contient jamais la clé."""
+
+    def __init__(self, message: str, statut: int | None = None) -> None:
+        super().__init__(message)
+        self.statut = statut
+
+
+class _SansRedirection(urllib.request.HTTPRedirectHandler):
+    """Une redirection n'est jamais suivie : la clé ne part que vers l'adresse demandée."""
+
+    def redirect_request(self, *arguments, **options):
+        return None
+
+
+def _maintenant() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def _dormir(secondes: float) -> None:
+    time.sleep(secondes)
+
+
+def _iso_depuis_ms(ms: int) -> str:
+    return (EPOCH + dt.timedelta(milliseconds=ms)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def _ms_depuis_texte(valeur: Any) -> int:
+    """Millisecondes depuis 1970 : HubSpot rend une date ISO (ou, selon la propriété, des millisecondes en texte)."""
+    texte = "" if valeur is None else str(valeur).strip()
+    if texte.isdigit():
+        return int(texte)
+    try:
+        date = dt.datetime.fromisoformat(texte.replace("Z", "+00:00"))
+    except ValueError as erreur:
+        raise ErreurHubSpot(f"Date illisible dans la réponse de HubSpot : {texte!r}") from erreur
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=dt.timezone.utc)
+    return (date - EPOCH) // dt.timedelta(milliseconds=1)
+
+
+def _verifier_url_hubspot(url: str) -> str:
+    morceaux = urlsplit(url)
+    if morceaux.scheme == "https" and morceaux.hostname:
+        return url.rstrip("/")
+    if morceaux.scheme == "http" and morceaux.hostname in ("localhost", "127.0.0.1", "::1"):  # un essai local, jamais la clé en clair sur le réseau
+        return url.rstrip("/")
+    raise ErreurEntree("L'adresse de l'API HubSpot doit être en https (http seulement pour localhost).")
+
+
+class ClientHubSpot:
+    """Un petit client HTTP : nouvel essai sur 429, 5xx et coupure réseau, avec attente croissante."""
+
+    def __init__(self, url: str, jeton: str) -> None:
+        self.url = _verifier_url_hubspot(url)
+        self._jeton = jeton
+        self._derniere_recherche = 0.0
+        self._ouvreur = urllib.request.build_opener(_SansRedirection)
+
+    def appeler(self, methode: str, chemin: str, corps: Any = None, acceptes: tuple = (), recherche: bool = False) -> tuple[int, Any]:
+        """Rend (statut, JSON). Un statut d'erreur lève ErreurHubSpot, sauf ceux de `acceptes`."""
+        if recherche and PAUSE_RECHERCHE_HUBSPOT > 0:
+            attente = self._derniere_recherche + PAUSE_RECHERCHE_HUBSPOT - time.monotonic()
+            if attente > 0:
+                _dormir(attente)
+            self._derniere_recherche = time.monotonic()
+        donnees = json.dumps(corps).encode("utf-8") if corps is not None else None
+        requete = urllib.request.Request(self.url + chemin, data=donnees, method=methode, headers={
+            "Authorization": f"Bearer {self._jeton}", "Content-Type": "application/json", "Accept": "application/json",
+            "User-Agent": f"leadlint/{VERSION}",
+        })
+        for essai in range(1, ESSAIS_HUBSPOT + 1):
+            retry_apres = None
+            try:
+                with self._ouvreur.open(requete, timeout=60) as reponse:
+                    statut, brut = reponse.status, reponse.read()
+            except urllib.error.HTTPError as erreur:
+                statut, brut = erreur.code, erreur.read()
+                valeur = erreur.headers.get("Retry-After") if erreur.headers else None
+                try:
+                    retry_apres = float(valeur) if valeur is not None else None
+                except ValueError:
+                    retry_apres = None
+                erreur.close()
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as erreur:
+                statut, brut = 0, str(getattr(erreur, "reason", erreur)).encode("utf-8", "replace")
+            if statut == 429 or statut >= 500 or statut == 0:
+                if essai == ESSAIS_HUBSPOT:
+                    raise ErreurHubSpot(f"HubSpot : {statut or 'réseau'} sur {methode} {chemin} après {ESSAIS_HUBSPOT} essais.")
+                if retry_apres is not None and retry_apres > ATTENTE_MAX_HUBSPOT:
+                    raise ErreurHubSpot(f"HubSpot demande d'attendre {int(retry_apres)} s (quota atteint) : le passage s'arrête, rien n'est enregistré comme fait.")
+                attente = min(max(retry_apres or 0.0, float(2 ** (essai - 1))), ATTENTE_MAX_HUBSPOT)
+                sys.stderr.write(f"leadlint : HubSpot {statut or 'réseau'} sur {methode} {chemin}, nouvel essai dans {attente:g} s ({essai}/{ESSAIS_HUBSPOT - 1}).\n")
+                _dormir(attente)
+                continue
+            try:
+                contenu = json.loads(brut.decode("utf-8")) if brut.strip() else None
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                contenu = None
+            if statut >= 300 and statut not in acceptes:
+                message = contenu.get("message") if isinstance(contenu, dict) and isinstance(contenu.get("message"), str) else ""
+                raise ErreurHubSpot(f"HubSpot : {statut} sur {methode} {chemin}" + (f" : {message[:300]}" if message else "."), statut)
+            return statut, contenu
+        raise ErreurHubSpot("HubSpot : aucune réponse.")  # pragma: no cover
+
+
+def _client_hubspot(args) -> ClientHubSpot:
+    jeton = os.environ.get("HUBSPOT_TOKEN", "").strip()
+    if not jeton:
+        raise ErreurEntree("La variable d'environnement HUBSPOT_TOKEN est vide ou absente : y mettre la clé de service HubSpot (elle n'est jamais écrite dans un fichier).")
+    if any(c in jeton for c in "\r\n\x00"):
+        raise ErreurEntree("HUBSPOT_TOKEN contient un caractère interdit.")
+    return ClientHubSpot(args.api_url, jeton)
+
+
+def commande_hubspot_setup(args) -> int:
+    """Crée, sans rien écraser, le groupe et les propriétés : un 409 de HubSpot veut dire « existe déjà »."""
+    client = _client_hubspot(args)
+    statut, _ = client.appeler("POST", "/crm/v3/properties/contacts/groups", {"name": GROUPE_HUBSPOT, "label": "LeadLint", "displayOrder": -1}, acceptes=(409,))
+    groupe = "existe déjà" if statut == 409 else "créé"
+    proprietes = {}
+    for propriete in proprietes_hubspot():
+        statut, _ = client.appeler("POST", "/crm/v3/properties/contacts", propriete, acceptes=(409,))
+        proprietes[propriete["name"]] = "existe déjà" if statut == 409 else "créée"
+    _ecrire_sortie(
+        {"outil": "leadlint", "version": VERSION, "commande": "hubspot setup", "groupe": groupe, "proprietes": proprietes}, args.json,
+        [f"Groupe {GROUPE_HUBSPOT} : {groupe}"] + [f"  {nom} : {etat}" for nom, etat in proprietes.items()],
+    )
+    return 0
+
+
+# ----- sync
+
+def _correspondance_hubspot(champs: list[str] | None) -> "OrderedDict[str, str]":
+    correspondance = OrderedDict(CORRESPONDANCE_HUBSPOT)
+    for brut in champs or []:
+        champ, _, propriete = brut.partition("=")
+        if champ not in ENTETES_CANDIDATS or not re.fullmatch(r"[a-z][a-z0-9_]*", propriete):
+            raise ErreurEntree(f"--champ attend champ=propriete (champ de LeadLint : {', '.join(ENTETES_CANDIDATS)} ; propriété HubSpot en minuscules) : reçu {brut!r}.")
+        correspondance[champ] = propriete
+    return correspondance
+
+
+def _axes_personas(matrice: dict) -> tuple[str, str | None]:
+    """L'axe écrit dans leadlint_segment (le département) et celui de leadlint_niveau (la séniorité)."""
+    axes = [a["id"] for a in matrice.get("axes", [])]
+    if not axes:
+        raise ErreurEntree("Cette matrice n'a aucun axe.")
+    segment = "categorie" if "categorie" in axes else axes[0]
+    reste = [a for a in axes if a != segment]
+    niveau = "seniorite" if "seniorite" in axes and segment != "seniorite" else (reste[0] if reste else None)
+    return segment, niveau
+
+
+def _lire_matrice_hubspot(chemin: Path | None) -> tuple[dict, bool]:
+    if chemin is None:
+        return json.loads(MATRICE_DEFAUT.read_text(encoding="utf-8")), False
+    _, configuration = charger_mission(chemin)
+    if configuration["mode"] != "persona":
+        raise ErreurEntree("Ce fichier est une mission B2B, pas une matrice de personas.")
+    return configuration["matrice"], configuration["multiCategories"]
+
+
+class _Classeur:
+    """Ce que sync sait faire d'une page de fiches : les classer. Une seule logique, celle de `personas` ou de `check`."""
+
+    def __init__(self, args, correspondance: "OrderedDict[str, str]") -> None:
+        self.args, self.correspondance = args, correspondance
+        self.configuration: dict | None = None
+        self.blacklist: list[dict] = []
+        self.compteurs: Counter = Counter()
+        self.note: list[str] = []
+        matrice_fichier = args.matrice
+        if args.personas:
+            self.mode = "personas"
+            self.matrice, self.multi = _lire_matrice_hubspot(matrice_fichier)
+            self.multi = self.multi or args.multi
+        else:
+            identite, configuration = charger_mission(args.mission)
+            if configuration["mode"] == "persona":
+                self.mode, self.matrice, self.multi = "personas", configuration["matrice"], configuration["multiCategories"] or args.multi
+            else:
+                self.mode = "mission"
+                self.matrice, self.multi = _lire_matrice_hubspot(matrice_fichier)
+                self.nom = _nom_mission(identite, args.mission)
+                self.configuration = configuration
+                self._preparer_mission()
+        self.axe_segment, self.axe_niveau = _axes_personas(self.matrice)
+        self.ecrits = ("leadlint_segment", "leadlint_niveau", "leadlint_verdict", "leadlint_raison") if self.mode == "mission" else ("leadlint_segment", "leadlint_niveau")
+        if self.axe_niveau is None:
+            self.ecrits = tuple(c for c in self.ecrits if c != "leadlint_niveau")
+        champs = ["poste"] if self.mode == "personas" else list(self.correspondance)
+        self.proprietes = list(OrderedDict.fromkeys(
+            ["lastmodifieddate", *CHAMPS_ECRITS_HUBSPOT, *(("firstname", "lastname") if self.mode == "mission" else ()), *(self.correspondance[c] for c in champs if c in self.correspondance)]))
+        self.signature = empreinte_texte({
+            "mode": self.mode, "matrice": self.matrice, "multi": self.multi, "ecrits": list(self.ecrits), "correspondance": self.correspondance,
+            "regles": self.configuration["regles"] if self.configuration else None,
+            "champsObligatoires": self.configuration["champsObligatoires"] if self.configuration else None,
+            "exclusions": self.empreinte_exclusions if self.configuration else None, "nom": getattr(self, "nom", None),
+        })
+
+    def _preparer_mission(self) -> None:
+        """Charge la liste d'exclusion, relie les colonnes aux propriétés HubSpot et passe le contrôle avant lancement."""
+        configuration, args = self.configuration, self.args
+        self.empreinte_exclusions = None
+        if args.exclusions:
+            entetes, lignes = lire_tableau(args.exclusions)
+            configuration["mappingBlacklist"] = completer_mapping(configuration["mappingBlacklist"], entetes, ENTETES_BLACKLIST)
+            self.blacklist = vers_objets(entetes, lignes)
+            self.empreinte_exclusions = empreinte_blacklist(self.blacklist, configuration["mappingBlacklist"]) if self.blacklist else None
+        configuration["mappingCandidats"] = {"nomComplet": NOM_COMPLET_HUBSPOT, **self.correspondance}
+        # Un contrôle avant lancement porte sur un fichier d'export ; une lecture de HubSpot n'en a pas : un contact tient lieu de fichier prêt.
+        controles = controler_prevol(configuration, 1, len(self.blacklist), self.empreinte_exclusions)
+        self.controles = controles
+        self.autorise = prevol_autorise(controles)
+        if not self.autorise:
+            return
+        # Les doublons se jugent sur toute la liste ; un passage ne voit qu'une page : cette règle est laissée de côté ici.
+        self.evaluation = copy.deepcopy(configuration)
+        saute = [r for r in self.evaluation["regles"] if r.get("operateur") == "unique" and vrai(r.get("active"))]
+        for regle in saute:
+            regle["active"] = False
+        if saute:
+            self.note.append("Règle des doublons non appliquée : un passage ne voit qu'une page de contacts, pas toute la base.")
+
+    def champs_sans_propriete(self) -> list[str]:
+        configuration = self.configuration or {}
+        requis = set(configuration.get("champsObligatoires", [])) | {DEFINITIONS[r["critereId"]][0] for r in configuration.get("regles", []) if vrai(r.get("active")) and r.get("critereId") in DEFINITIONS and DEFINITIONS[r["critereId"]][0]}
+        return sorted(c for c in requis if c != "nomComplet" and c not in self.correspondance)
+
+    def souhaite(self, fiches: list[dict]) -> list[dict]:
+        """Pour chaque fiche, les valeurs leadlint_* voulues."""
+        propres = [fiche.get("properties") or {} for fiche in fiches]
+        postes = [p.get(self.correspondance["poste"]) for p in propres]
+        resultat = segmenter(postes, self.matrice, self.multi)["lignes"]
+        voulus = []
+        for valeurs in resultat:
+            voulus.append({"leadlint_segment": valeurs[self.axe_segment], **({"leadlint_niveau": valeurs[self.axe_niveau]} if self.axe_niveau else {})})
+        if self.mode == "personas":
+            return voulus
+        candidats = []
+        for p in propres:
+            candidat = {prop: p[prop] for prop in self.correspondance.values() if p.get(prop) not in (None, "")}
+            candidat[NOM_COMPLET_HUBSPOT] = rogner(f"{p.get('firstname') or ''} {p.get('lastname') or ''}")
+            candidats.append(candidat)
+        for voulu, ligne in zip(voulus, valider_export_b2b(candidats, self.blacklist, self.evaluation)):
+            self.compteurs[ligne["statut"]] += 1
+            cause = ligne["causePrincipale"]
+            voulu["leadlint_verdict"] = VERDICTS_HUBSPOT[ligne["statut"]]
+            voulu["leadlint_raison"] = f"{type_probleme(ligne)} : {cause['raison']}"[:500] if cause else ""
+            voulu["leadlint_segment"] = self.nom if ligne["statut"] != "Rejeté" else ""
+        return voulus
+
+
+def _lire_etat_hubspot(chemin: Path) -> dict | None:
+    if not chemin.exists():
+        return None
+    try:
+        etat = json.loads(chemin.read_text(encoding="utf-8"))
+        assert isinstance(etat, dict) and isinstance(etat.get("dernier_passage"), str)
+        _ms_depuis_texte(etat["dernier_passage"])
+    except (OSError, ValueError, AssertionError) as erreur:
+        raise ErreurEntree(f"Fichier d'état illisible ({chemin}) : supprime-le pour refaire un passage complet.") from erreur
+    return etat
+
+
+def _ecrire_etat_hubspot(chemin: Path, etat: dict) -> None:
+    """Écriture en deux temps : un passage interrompu ne laisse jamais un fichier à moitié écrit."""
+    temporaire = chemin.with_name(chemin.name + ".tmp")
+    temporaire.write_text(json.dumps(etat, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporaire, chemin)
+
+
+def lire_contacts_modifies(client: ClientHubSpot, proprietes: list[str], depuis_ms: int, traiter, bilan: dict) -> None:
+    """Parcourt les contacts modifiés depuis `depuis_ms`, du plus ancien au plus récent, 100 par page, et passe chaque page à `traiter`.
+
+    Une recherche rend 10 000 résultats au plus. Au plafond, on repart de la dernière date vue ; les fiches déjà lues à cette date exacte
+    sont écartées par leur numéro. Si une recherche entière ne rend rien de nouveau (plus de 10 000 fiches à la même milliseconde), on
+    s'arrête avec une erreur plutôt que de sauter des fiches.
+    """
+    borne, deja_lus = depuis_ms, set()
+    dernier_ts, ids_au_dernier_ts = None, set()
+    while True:
+        apres, lus, nouveaux, suite = None, 0, 0, False
+        while True:
+            corps = {
+                "filterGroups": [{"filters": [{"propertyName": "lastmodifieddate", "operator": "GTE", "value": str(borne)}]}],
+                "sorts": [{"propertyName": "lastmodifieddate", "direction": "ASCENDING"}],
+                "properties": proprietes, "limit": TAILLE_PAGE_HUBSPOT,
+            }
+            if apres is not None:
+                corps["after"] = apres
+            _, reponse = client.appeler("POST", "/crm/v3/objects/contacts/search", corps, recherche=True)
+            resultats = (reponse or {}).get("results") or []
+            bilan["recherches"] += 1
+            page = []
+            for fiche in resultats:
+                ts = _ms_depuis_texte((fiche.get("properties") or {}).get("lastmodifieddate"))
+                lus += 1
+                if ts == borne and fiche["id"] in deja_lus:
+                    continue
+                if dernier_ts is None or ts > dernier_ts:
+                    dernier_ts, ids_au_dernier_ts = ts, set()
+                if ts == dernier_ts:
+                    ids_au_dernier_ts.add(fiche["id"])
+                nouveaux += 1
+                page.append(fiche)
+            if page:
+                traiter(page)
+            apres = (((reponse or {}).get("paging") or {}).get("next") or {}).get("after")
+            if not apres:
+                break
+            if lus >= PLAFOND_RECHERCHE_HUBSPOT:
+                suite = True
+                break
+        if not suite:
+            return
+        if nouveaux == 0 or dernier_ts is None:
+            raise ErreurHubSpot(f"Plus de {PLAFOND_RECHERCHE_HUBSPOT} contacts modifiés au même instant : impossible de les lire par pages sans en sauter. Rien n'est enregistré comme fait.")
+        bilan["redemarrages"] += 1
+        borne, deja_lus = dernier_ts, set(ids_au_dernier_ts)
+
+
+def commande_hubspot_sync(args) -> int:
+    client = _client_hubspot(args)
+    correspondance = _correspondance_hubspot(args.champ)
+    classeur = _Classeur(args, correspondance)
+    base = {"outil": "leadlint", "version": VERSION, "commande": "hubspot sync", "mode": classeur.mode, "essai_a_blanc": bool(args.dry_run)}
+    if classeur.mode == "mission" and not classeur.autorise:
+        manquants = classeur.champs_sans_propriete()
+        bloques = [c for c in classeur.controles if c["bloquant"] and not c["valide"]]
+        _ecrire_sortie(
+            {**base, "livre": False, "prevol": {"autorise": False, "controles": classeur.controles}}, args.json,
+            [f"leadlint hubspot sync « {classeur.nom} » : contrôle avant lancement BLOQUÉ ({len(bloques)} contrôle(s) à lever), rien n'est lu ni écrit."]
+            + [f"  ✗ {c['libelle']}" for c in bloques]
+            + ([f"  Champs sans propriété HubSpot : {', '.join(manquants)} (ajouter --champ champ=propriete)."] if manquants else [])
+            + ["  Une mission issue d'un export de fournisseur ne passe pas ici : utiliser une mission d'origine « cible » validée par un humain."],
+        )
+        return 2
+
+    etat_chemin = args.etat or Path(FICHIER_ETAT_HUBSPOT)
+    etat = _lire_etat_hubspot(etat_chemin)
+    if args.tout:
+        depuis_ms, depuis_texte = 0, "passage complet demandé"
+    elif args.depuis:
+        depuis_ms = _ms_depuis_texte(args.depuis)
+        depuis_texte = f"depuis {args.depuis}"
+    elif etat and etat.get("signature") == classeur.signature:
+        depuis_ms = max(0, _ms_depuis_texte(etat["dernier_passage"]) - RECOUVREMENT_HUBSPOT * 1000)
+        depuis_texte = f"depuis le dernier passage ({etat['dernier_passage']})"
+    else:
+        depuis_ms = 0
+        depuis_texte = "passage complet (les règles ou la correspondance ont changé depuis le dernier passage)" if etat else "premier passage, complet"
+
+    debut = _maintenant()
+    date_ecriture = _iso_depuis_ms((debut - EPOCH) // dt.timedelta(milliseconds=1))
+    bilan = {"recherches": 0, "redemarrages": 0}
+    stats = {"lues": 0, "inchangees": 0}
+    a_ecrire: list[tuple[str, dict]] = []
+
+    def traiter(fiches: list[dict]) -> None:
+        for fiche, voulu in zip(fiches, classeur.souhaite(fiches)):
+            actuel = fiche.get("properties") or {}
+            change = {nom: valeur for nom, valeur in voulu.items() if nom in classeur.ecrits and (actuel.get(nom) or "") != valeur}
+            stats["lues"] += 1
+            if change:
+                a_ecrire.append((str(fiche["id"]), {**change, "leadlint_date": date_ecriture}))
+            else:
+                stats["inchangees"] += 1
+
+    # Tout se lit avant d'écrire : écrire déplace les fiches dans le tri par date de modification et ferait sauter des pages.
+    lire_contacts_modifies(client, classeur.proprietes, depuis_ms, traiter, bilan)
+
+    ecrites, erreurs = 0, 0
+    if not args.dry_run:
+        for debut_lot in range(0, len(a_ecrire), TAILLE_PAGE_HUBSPOT):
+            lot = a_ecrire[debut_lot:debut_lot + TAILLE_PAGE_HUBSPOT]
+            try:
+                _, reponse = client.appeler("POST", "/crm/v3/objects/contacts/batch/update", {"inputs": [{"id": i, "properties": p} for i, p in lot]})
+            except ErreurHubSpot as erreur:
+                if erreur.statut == 400:
+                    raise ErreurHubSpot(f"{erreur} Les propriétés existent-elles ? Lancer d'abord « leadlint hubspot setup ».", 400) from erreur
+                raise
+            en_erreur = len((reponse or {}).get("errors") or []) if isinstance(reponse, dict) else 0
+            erreurs += en_erreur
+            ecrites += len(lot) - en_erreur
+    etat_enregistre = False
+    if not args.dry_run and erreurs == 0:
+        _ecrire_etat_hubspot(etat_chemin, {
+            "version": 1, "dernier_passage": _iso_depuis_ms((debut - EPOCH) // dt.timedelta(milliseconds=1)), "signature": classeur.signature,
+            "fiches_lues": stats["lues"], "fiches_ecrites": ecrites,
+        })
+        etat_enregistre = True
+    sortie = {
+        **base, "depuis": depuis_texte, "fiches_lues": stats["lues"], "fiches_a_ecrire": len(a_ecrire), "fiches_ecrites": ecrites,
+        "fiches_inchangees": stats["inchangees"], "erreurs": erreurs, "recherches": bilan["recherches"], "redemarrages_au_plafond": bilan["redemarrages"],
+        "etat_enregistre": etat_enregistre, "notes": classeur.note,
+    }
+    if classeur.mode == "mission":
+        sortie["verdicts"] = {statut: classeur.compteurs.get(statut, 0) for statut in VERDICTS_HUBSPOT}
+    if args.dry_run:
+        sortie["apercu"] = [{"id": i, **{k: v for k, v in p.items() if k != "leadlint_date"}} for i, p in a_ecrire[:10]]
+    titre = f"leadlint hubspot sync{' « ' + classeur.nom + ' »' if classeur.mode == 'mission' else ' (personas)'} : {depuis_texte}"
+    texte = [titre + (" — ESSAI À BLANC, rien n'est écrit" if args.dry_run else "")]
+    texte.append(f"Contacts lus {stats['lues']} · à écrire {len(a_ecrire)} · inchangés {stats['inchangees']}" + ("" if args.dry_run else f" · écrits {ecrites} · en erreur {erreurs}"))
+    if classeur.mode == "mission":
+        texte.append("Verdicts : " + " · ".join(f"{statut} {classeur.compteurs.get(statut, 0)}" for statut in VERDICTS_HUBSPOT))
+    if bilan["redemarrages"]:
+        texte.append(f"Plafond de {PLAFOND_RECHERCHE_HUBSPOT} résultats atteint {bilan['redemarrages']} fois : recherche reprise à la dernière date vue.")
+    texte += classeur.note
+    if args.dry_run:
+        texte += [f"  fiche {i} : " + ", ".join(f"{k}={v!r}" for k, v in p.items() if k != "leadlint_date") for i, p in a_ecrire[:10]]
+        if len(a_ecrire) > 10:
+            texte.append(f"  … et {len(a_ecrire) - 10} autres fiches")
+    texte.append(f"État du dernier passage : {'enregistré dans ' + str(etat_chemin) if etat_enregistre else 'non modifié'}")
+    _ecrire_sortie(sortie, args.json, texte)
+    return 0 if erreurs == 0 else 1
+
+
 class _FormateurAide(argparse.RawDescriptionHelpFormatter):
     """Le formateur d'origine, qui n'annonce que le premier nom d'une option longue.
 
@@ -1512,7 +1990,7 @@ class _Parseur(argparse.ArgumentParser):
 
     def error(self, message):
         message = re.sub(r"/--(?:moulinette|blacklist)\b", "", message)
-        message = re.sub(r"\(choose from [^)]*\)", "(choose from personas, check, preflight, fingerprints)", message)
+        message = re.sub(r"\(choose from ([^)]*)\)", lambda trouve: "(choose from personas, check, preflight, fingerprints, hubspot)" if "b2b" in trouve.group(1) else trouve.group(0), message)
         super().error(message)
 
 
@@ -1527,7 +2005,7 @@ def _option_exclusions(commande, aide: str) -> None:
 def construire_parseur() -> argparse.ArgumentParser:
     parseur = _Parseur(prog="leadlint", description=__doc__, formatter_class=_FormateurAide)
     parseur.add_argument("--version", action="version", version=f"leadlint {VERSION}")
-    sous = parseur.add_subparsers(dest="commande", required=True, metavar="{personas,check,preflight,fingerprints}")
+    sous = parseur.add_subparsers(dest="commande", required=True, metavar="{personas,check,preflight,fingerprints,hubspot}")
 
     personas = sous.add_parser("personas", help="sort a column of job titles", formatter_class=_FormateurAide)
     personas.add_argument("entree", type=Path, help="file .xlsx, .xlsm or .csv")
@@ -1562,6 +2040,29 @@ def construire_parseur() -> argparse.ArgumentParser:
         _option_exclusions(empreintes, "exclusion list, for its fingerprint and volume")
         empreintes.add_argument("--json", action="store_true", help="JSON output")
         empreintes.set_defaults(action=commande_empreintes)
+
+    hubspot = sous.add_parser("hubspot", help="write leadlint_* properties on HubSpot contacts (setup, sync)", formatter_class=_FormateurAide)
+    sous_hubspot = hubspot.add_subparsers(dest="action_hubspot", required=True, metavar="{setup,sync}")
+    for nom_commande, aide_commande, action in (
+        ("setup", "create the leadlint property group and the five contact properties (safe to repeat)", commande_hubspot_setup),
+        ("sync", "classify the contacts modified since the last pass and write only the values that change", commande_hubspot_sync),
+    ):
+        commande = sous_hubspot.add_parser(nom_commande, help=aide_commande, description=aide_commande + ". The key is read from the HUBSPOT_TOKEN environment variable.", formatter_class=_FormateurAide)
+        commande.add_argument("--api-url", default=URL_HUBSPOT, help=f"HubSpot API address (default {URL_HUBSPOT}; http only for localhost)")
+        commande.add_argument("--json", action="store_true", help="JSON bilan on standard output (for an agent)")
+        if nom_commande == "sync":
+            source = commande.add_mutually_exclusive_group(required=True)
+            source.add_argument("--mission", "--moulinette", dest="mission", metavar="MISSION", type=Path, help="mission JSON file (a target mission validated by a human), or a personas matrix")
+            source.add_argument("--personas", action="store_true", help="only sort job titles: leadlint_segment and leadlint_niveau, no verdict")
+            commande.add_argument("-m", "--matrice", type=Path, help="personas matrix JSON (default: the generic matrix)")
+            commande.add_argument("--multi", action="store_true", help="keep every category found, by priority")
+            _option_exclusions(commande, "exclusion list .xlsx or .csv (mission only)")
+            commande.add_argument("--etat", type=Path, metavar="FILE", help=f"state file holding the date of the last pass (default: ./{FICHIER_ETAT_HUBSPOT})")
+            commande.add_argument("--depuis", metavar="DATE", help="read the contacts modified since this ISO date instead of the state file")
+            commande.add_argument("--tout", action="store_true", help="read every contact (full pass)")
+            commande.add_argument("--champ", action="append", metavar="CHAMP=PROPRIETE", help="link a LeadLint field to a HubSpot contact property (repeatable), e.g. codeNaf=naf")
+            commande.add_argument("--dry-run", action="store_true", help="read and classify, write nothing, keep the state file as it is")
+        commande.set_defaults(action=action)
     return parseur
 
 

@@ -910,7 +910,7 @@ class Vocabulaire(unittest.TestCase):
             "leadlint : Ce fichier est une mission B2B : utilise la commande « check ».", "leadlint : Les signatures ne concernent qu'une mission B2B.",
             "leadlint check: error: the following arguments are required: --mission",
             "leadlint check: error: argument --exclusions: expected one argument",
-            "leadlint: error: argument {personas,check,preflight,fingerprints}: invalid choice: 'inconnue' (choose from personas, check, preflight, fingerprints)",
+            "leadlint: error: argument {personas,check,preflight,fingerprints,hubspot}: invalid choice: 'inconnue' (choose from personas, check, preflight, fingerprints, hubspot)",
         ):
             self.assertTrue(attendu in lus, f"texte jamais rencontré : {attendu}")
         self.assertTrue(any(texte.startswith("Contrôle avant lancement BLOQUÉ") for texte in lus), "aucune sortie bloquée n'a été lue")

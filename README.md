@@ -41,6 +41,7 @@ Without uv: clone the repository, `python -m pip install openpyxl` (Python 3.9+)
 | `leadlint preflight <export> --mission m.json [--exclusions x.csv]` | say only whether the mission may run, control by control |
 | `leadlint fingerprints --mission m.json [--exclusions x.csv]` | compute the fingerprints the mission memorises (strategy, search, filters, exclusion list) |
 | `leadlint personas <file>` | sort a column of job titles: department, seniority, inferred buying role |
+| `leadlint hubspot setup` / `leadlint hubspot sync (--mission m.json \| --personas)` | write `leadlint_*` properties on HubSpot contacts, only the values that change; key in `HUBSPOT_TOKEN` (see the skill) |
 
 Add `--json` to get the bilan on standard output, `--lignes` to add each line's verdict to it, `--diagnostic` to see the verdicts even when the preflight blocks (nothing deliverable is written).
 
