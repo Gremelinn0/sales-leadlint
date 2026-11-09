@@ -5,6 +5,14 @@ description: "When a B2B contact list or prospecting export must be cleaned, req
 
 # leadlint
 
+> 🎯 **Recommended targeting method: few searches, all personas, leadlint sorts.** Build account lists by sector; in each,
+> run ONE contact search that includes all your personas (cumulative, never exclusive), instead of one search per persona.
+> Once the searches are validated, derive the mission file and its matrix from their parameters (criteria, personas,
+> title keywords, exclusions). Pass every export through `check`: it cleans, rejects off-target lines and classifies each
+> contact into its segment (sector from the account list, persona from the job title). One segment = one campaign in the
+> outreach tool (the campaign name or UTM carries the segment), then the CRM. Why: every search costs an export, a
+> cleanup and an import, and Sales Navigator caps saved searches at 50 lead and 50 account searches.
+
 A linter for B2B lead lists, built for AI agents. A local Python script that does two things on a contacts file (Excel or CSV), without any data leaving the machine. It lives in `scripts/leadlint.py`:
 
 1. **`personas`**: classifies each job title (department, seniority, inferred buying role) with a keyword matrix.
