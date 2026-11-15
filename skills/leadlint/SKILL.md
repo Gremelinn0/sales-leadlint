@@ -67,7 +67,7 @@ Older names still work, as exact aliases (same result, same exit code), though `
 
 ## HubSpot: write the verdict on the contacts
 
-LeadLint computes outside HubSpot and writes five `leadlint_*` properties on contacts; HubSpot then acts through its own lists and workflows. It touches no other property. The key (a HubSpot service key) is read from `HUBSPOT_TOKEN`, never printed, never written to a file.
+LeadLint computes outside HubSpot and writes five `leadlint_*` properties on contacts; HubSpot then acts through its own lists and workflows. Why this split: HubSpot-only rules leave no traced verdict and match "contains" without whole words; custom code inside a workflow is capped (20 s, 128 MB) and needs a paid tier. Webhooks need a paid data tier, so `sync` polls on `lastmodifieddate` instead. Free or Starter is enough to compute and segment; an automatic action (enrol in a sequence, alert a rep) needs a tier with workflows. It touches no other property. The key (a HubSpot service key) is read from `HUBSPOT_TOKEN`, never printed, never written to a file.
 
 ```bash
 python scripts/leadlint.py hubspot setup          # creates the group and the properties, safe to repeat
