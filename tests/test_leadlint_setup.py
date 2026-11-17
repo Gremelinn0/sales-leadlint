@@ -14,16 +14,19 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import html
+import http.client
 import io
 import json
 import os
 import py_compile
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.parse
 from collections import Counter
 from pathlib import Path
 
@@ -706,6 +709,473 @@ class Vocabulaire(Banc):
                 self.assertNotIn(TIRET_CADRATIN, texte)
 
 
+class Lanceurs(Banc):
+    def test_create_ecrit_les_deux_lanceurs(self):
+        dossier = self.monter(valider=False)
+        windows = (dossier / "Ouvrir la moulinette.bat").read_bytes()
+        mac = (dossier / "ouvrir-la-moulinette.command").read_bytes()
+        texte = windows.decode("ascii")  # aucune page de code ne peut le déformer
+        self.assertNotIn(b"\r\r", windows)
+        self.assertEqual(windows.count(b"\n"), windows.count(b"\r\n"), "fins de ligne Windows partout")
+        for morceau in ('cd /d "%~dp0"', "py -3 moulinette.py --ouvrir", "python moulinette.py --ouvrir", "pause", "Python n'est pas installe", "python.org"):
+            self.assertIn(morceau, texte)
+        self.assertLess(texte.index("py -3 moulinette.py"), texte.index("python moulinette.py"), "essaie py, puis python")
+        self.assertNotIn(b"\r", mac)
+        texte_mac = mac.decode("utf-8")
+        self.assertTrue(texte_mac.startswith("#!/bin/bash\n"))
+        for morceau in ('cd "$(dirname "$0")"', "python3 moulinette.py --ouvrir", "read -r", "python.org"):
+            self.assertIn(morceau, texte_mac)
+        if os.name != "nt":
+            self.assertTrue(os.stat(dossier / "ouvrir-la-moulinette.command").st_mode & 0o111, "bit exécutable posé")
+        for nom in ("Ouvrir la moulinette.bat", "ouvrir-la-moulinette.command"):
+            self.assertIn(nom, s.creer(dossier / "reponses.json", dossier)["fichiers"])
+
+    def test_le_lanceur_windows_demarre_la_moulinette_et_dit_quand_python_manque(self):
+        if os.name != "nt":
+            self.skipTest("le lanceur Windows ne se lance que sous Windows")
+        dossier = self.monter()
+        environnement = {cle: valeur for cle, valeur in os.environ.items() if cle != "PYTHONPATH"}
+        environnement.update({"LEADLINT_SANS_NAVIGATEUR": "1", "PYTHONIOENCODING": "utf-8"})
+        lanceur = subprocess.Popen(
+            [os.environ.get("COMSPEC", "cmd.exe"), "/c", str(dossier / "Ouvrir la moulinette.bat")], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL, text=True, encoding="utf-8", cwd=tempfile.mkdtemp(prefix="leadlint-ailleurs-"), env=environnement,
+        )
+        self.addCleanup(lambda: (lanceur.poll() is None and subprocess.run(["taskkill", "/F", "/T", "/PID", str(lanceur.pid)], capture_output=True)))
+        self.addCleanup(lanceur.stdout.close)
+        ligne = ""
+        while "http://127.0.0.1:" not in ligne:
+            ligne = lanceur.stdout.readline()
+            self.assertTrue(ligne, "le lanceur a rendu la main sans ouvrir la page")
+        adresse = re.search(r"http://127\.0\.0\.1:(\d+)/\?t=([\w-]+)", ligne)
+        connexion = http.client.HTTPConnection("127.0.0.1", int(adresse.group(1)), timeout=10)
+        connexion.request("POST", f"/fermer?t={adresse.group(2)}", b"")
+        self.assertEqual(connexion.getresponse().status, 200)
+        lanceur.wait(timeout=20)
+        # Sans Python dans le chemin : un message clair, pas une fenêtre qui se ferme sans rien dire.
+        vide = tempfile.mkdtemp(prefix="leadlint-sans-python-")
+        self.addCleanup(shutil.rmtree, vide, True)
+        environnement["PATH"] = vide
+        sans = subprocess.run([os.environ.get("COMSPEC", "cmd.exe"), "/c", str(dossier / "Ouvrir la moulinette.bat")], capture_output=True, text=True,
+                              encoding="cp850", errors="replace", stdin=subprocess.DEVNULL, env=environnement, timeout=60)
+        self.assertIn("Python n'est pas installe sur cet ordinateur.", sans.stdout)
+        self.assertIn("python.org", sans.stdout)
+
+
+class Interface(Banc):
+    """La page « Déposez votre export » : un vrai serveur lancé comme la personne le lance (un sous-processus), interrogé par de vraies requêtes."""
+
+    def demarrer(self, dossier: Path, *arguments: str) -> tuple:
+        environnement = {cle: valeur for cle, valeur in os.environ.items() if cle != "PYTHONPATH"}
+        environnement.update({"LEADLINT_SANS_NAVIGATEUR": "1", "PYTHONIOENCODING": "utf-8"})
+        processus = subprocess.Popen(
+            [sys.executable, str(dossier / "moulinette.py"), *arguments], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            encoding="utf-8", cwd=tempfile.mkdtemp(prefix="leadlint-ailleurs-"), env=environnement,
+        )
+        self.addCleanup(self.arreter, processus)
+        ligne = processus.stdout.readline()
+        trouve = re.search(r"http://127\.0\.0\.1:(\d+)/\?t=([\w-]+)\. Ctrl\+C pour fermer\.$", ligne.strip())
+        self.assertIsNotNone(trouve, f"ligne d'ouverture inattendue : {ligne!r} {processus.poll()}")
+        self.ligne_ouverture = ligne.strip()
+        return processus, int(trouve.group(1)), trouve.group(2)
+
+    @staticmethod
+    def arreter(processus) -> None:
+        if processus.poll() is None:
+            processus.kill()
+        processus.wait(timeout=20)
+        processus.stdout.close()
+        processus.stderr.close()
+
+    def appeler(self, port: int, methode: str, chemin: str, corps: bytes = None, entetes: dict = None) -> tuple:
+        """(code, entêtes, corps) : le chemin part tel quel, sans que le client le normalise."""
+        connexion = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
+        try:
+            connexion.request(methode, chemin, body=corps, headers=entetes or {})
+            reponse = connexion.getresponse()
+            return reponse.status, {cle.lower(): valeur for cle, valeur in reponse.getheaders()}, reponse.read()
+        finally:
+            connexion.close()
+
+    def deposer(self, port: int, jeton: str, nom: str, contenu: bytes = None, **entetes) -> tuple:
+        contenu = self.EXPORT.read_bytes() if contenu is None else contenu
+        code, tetes, corps = self.appeler(port, "POST", f"/passer?t={jeton}&nom={urllib.parse.quote(nom)}", contenu, entetes)
+        return code, tetes, json.loads(corps.decode("utf-8"))
+
+    def monter_et_demarrer(self, **options) -> tuple:
+        dossier = self.monter(**options)
+        processus, port, jeton = self.demarrer(dossier)
+        return dossier, processus, port, jeton
+
+    # --- la page
+
+    def test_la_page_d_accueil_et_son_etat(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        code, tetes, corps = self.appeler(port, "GET", f"/?t={jeton}")
+        self.assertEqual(code, 200)
+        self.assertEqual(tetes["content-type"], "text/html; charset=utf-8")
+        self.assertIn("default-src 'none'", tetes["content-security-policy"])
+        self.assertEqual(tetes["cache-control"], "no-store")
+        page = corps.decode("utf-8")
+        visible = texte_visible(re.sub(r"<script.*?</script>", " ", page, flags=re.S))
+        for phrase in (
+            "Prospection ESN exemple", "pour Camille Exemple", "Règles validées le 17/11/2026",
+            "Glissez votre export ici (.csv ou .xlsx) ou cliquez pour le choisir", "Liste d'exclusion : exclusions.csv, 3 lignes validées.",
+            "Voir mes règles", "Fermer la moulinette", "Zero Gravity AI",
+        ):
+            self.assertIn(phrase, visible)
+        self.assertRegex(page, r'<input type="file" id="fichier" accept="\.csv,\.xlsx,\.xlsm">')
+        self.assertIn(f'href="/regles?t={jeton}"', page)
+        self.assertIn("prefers-color-scheme:dark", page)
+        self.assertIn('name="viewport"', page)
+        self.assertEqual(set(re.findall(r"https?://[^\s\"'<>]+", re.sub(r"<script.*?</script>", " ", page, flags=re.S))), {"https://github.com/Gremelinn0/sales-leadlint"})
+        sans_style = re.sub(r"<style.*?</style>", " ", page, flags=re.S)
+        self.assertIsNone(MOTS_INTERDITS.search(sans_style), MOTS_INTERDITS.search(sans_style) and MOTS_INTERDITS.search(sans_style).group(0))
+        self.assertNotIn(TIRET_CADRATIN, page)
+        script = re.search(r"<script>(.*?)</script>", page, flags=re.S).group(1)
+        for interdit in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function", "setTimeout(\""):
+            self.assertNotIn(interdit, script, "tout texte reçu s'affiche avec textContent")
+        for ressource in re.findall(r"""(?:src|href)=["']([^"']+)["']""", sans_style):
+            self.assertTrue(ressource.startswith(("/regles?t=", "https://github.com/")), ressource)
+        self.assertNotIn("<link", page)
+        self.assertNotIn("@import", page)
+
+    def test_la_liste_d_exclusion_dit_son_etat(self):
+        reponses = lire_exemple()
+        reponses["liste_exclusion"] = False
+        dossier = self.monter(reponses, exclusions=False)
+        processus, port, jeton = self.demarrer(dossier)
+        page = self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8")
+        self.assertIn("Liste d&#x27;exclusion : aucune.", page)
+        # Une liste attendue mais absente, puis une liste changée depuis la validation.
+        dossier = self.monter()
+        processus, port, jeton = self.demarrer(dossier)
+        (dossier / "exclusions.csv").write_text("Entreprise\nAutre\n", encoding="utf-8")
+        page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
+        self.assertIn("Liste d'exclusion : exclusions.csv a changé depuis la validation. Revalidez vos règles.", page)
+        self.assertIn("Liste d'exclusion modifiée depuis la validation : à revalider", page)
+        (dossier / "exclusions.csv").unlink()
+        page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
+        self.assertIn("Liste d'exclusion : introuvable. Posez-la dans ce dossier sous le nom exclusions.csv.", page)
+
+    def test_la_page_n_est_pas_validee_avant_la_validation(self):
+        dossier = self.monter(valider=False)
+        _, port, jeton = self.demarrer(dossier)
+        page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
+        self.assertIn(SCEAU_ATTENTE, page)
+        self.assertIn("Liste d'exclusion : exclusions.csv, pas encore validée.", page)
+
+    def test_le_texte_de_la_personne_est_echappe(self):
+        reponses = lire_exemple()
+        reponses["nom"] = "Ma <img src=x onerror=alert(1)> prospection"
+        reponses["pour"] = "Camille <script>alert(2)</script> & Cie"
+        dossier = self.monter(reponses)
+        _, port, jeton = self.demarrer(dossier)
+        page = self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8")
+        self.assertNotIn("<img", page)
+        self.assertEqual(page.count("<script"), 1, "un seul script : le nôtre")
+        self.assertIn("&lt;img src=x onerror=alert(1)&gt;", page)
+        self.assertIn("&lt;script&gt;alert(2)&lt;/script&gt; &amp; Cie", page)
+
+    def test_la_page_des_regles_est_servie(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        code, tetes, corps = self.appeler(port, "GET", f"/regles?t={jeton}")
+        self.assertEqual(code, 200)
+        page = corps.decode("utf-8")
+        self.assertIn("Règles validées le 17/11/2026", texte_visible(page))
+        self.assertIn("Ouvrir la moulinette", texte_visible(page))
+        self.assertNotIn("<script", page)
+
+    # --- un dépôt
+
+    def test_depot_de_l_export_d_exemple(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        code, tetes, donnees = self.deposer(port, jeton, "export-brut-exemple.csv")
+        self.assertEqual(code, 200)
+        self.assertEqual(tetes["content-type"], "application/json; charset=utf-8")
+        self.assertEqual((donnees["ok"], donnees["bloque"], donnees["justes"]), (True, False, True))
+        self.assertEqual((donnees["total"], donnees["conformes"], donnees["a_verifier"], donnees["rejetes"]), (30, 11, 0, 19))
+        self.assertEqual({cause: n for cause, n in donnees["causes"]}, {cause.replace(" " + TIRET_CADRATIN + " ", " : "): n for cause, n in CAUSES_ATTENDUES.items()})
+        self.assertEqual(donnees["causes"], sorted(donnees["causes"], key=lambda ligne: -ligne[1]))
+        self.assertEqual(dict(donnees["par_cible"]), PAR_CIBLE_ATTENDU)
+        self.assertEqual((donnees["regles_non_appliquees"], donnees["avertissement"]), ([], None))
+        self.assertEqual(donnees["mission"], "Camille Exemple / Prospection ESN exemple")
+        self.assertNotIn(TIRET_CADRATIN, json.dumps(donnees, ensure_ascii=False))
+        self.assertEqual((dossier / "depots" / "export-brut-exemple.csv").read_bytes(), self.EXPORT.read_bytes())
+        liens = donnees["telechargements"]
+        self.assertEqual((liens["nettoye"]["nom"], liens["controle"]["nom"]), ("export-brut-exemple-nettoye.xlsx", "export-brut-exemple-controle-qa.xlsx"))
+        code, tetes, contenu = self.appeler(port, "GET", liens["nettoye"]["url"])
+        self.assertEqual(code, 200)
+        self.assertEqual(tetes["content-type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.assertIn("attachment", tetes["content-disposition"])
+        self.assertIn("export-brut-exemple-nettoye.xlsx", tetes["content-disposition"])
+        self.assertEqual(contenu, (dossier / "resultats" / "export-brut-exemple-nettoye.xlsx").read_bytes())
+        import openpyxl
+        lignes = [[c.value for c in ligne] for ligne in openpyxl.load_workbook(io.BytesIO(contenu)).worksheets[0].iter_rows()]
+        self.assertEqual((len(lignes) - 1, lignes[0][-1]), (11, "Cible"))
+        self.assertEqual(Counter(ligne[-1] for ligne in lignes[1:]), Counter(PAR_CIBLE_ATTENDU))
+        code, _, controle = self.appeler(port, "GET", liens["controle"]["url"])
+        self.assertEqual((code, controle), (200, (dossier / "resultats" / "export-brut-exemple-controle-qa.xlsx").read_bytes()))
+        # le passage est aussi inscrit dans la page des règles
+        self.assertEqual(self.passage(dossier)["conformes"], 11)
+        regles = texte_visible(self.appeler(port, "GET", f"/regles?t={jeton}")[2].decode("utf-8"))
+        self.assertIn("sur 30 lignes", regles)
+
+    def test_la_page_donne_le_meme_bilan_que_la_ligne_de_commande(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
+        ligne = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(ligne.returncode, 0, ligne.stderr)
+        self.assertEqual(ligne.stdout.splitlines()[1], "Lignes 30 · gardées 11 · à vérifier 0 · rejetées 19")
+        self.assertEqual(ligne.stdout.splitlines()[2], "Rejetées, par cause : " + " · ".join(f"{cause} {n}" for cause, n in donnees["causes"]))
+        self.assertEqual(ligne.stdout.splitlines()[3], "Gardées, par cible : " + " · ".join(f"{cible} {n}" for cible, n in donnees["par_cible"]))
+
+    def test_la_ligne_de_commande_ne_change_pas(self):
+        dossier = self.monter()
+        processus = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(processus.returncode, 0, processus.stderr)
+        lignes = processus.stdout.splitlines()
+        self.assertEqual(lignes[:5], [
+            "« Camille Exemple / Prospection ESN exemple » · export-brut-exemple.csv",
+            "Lignes 30 · gardées 11 · à vérifier 0 · rejetées 19",
+            "Rejetées, par cause : Mauvais intitulé de poste 7 · Doublon 2 · Liste d'exclusion 2 · Email professionnel 2 · Employés visibles LinkedIn 2 · Mauvaise entreprise 2 · Pays 1 · Champ obligatoire manquant : entreprise 1",
+            "Gardées, par cible : Dirigeants 6 · Direction commerciale 5",
+            "Contrôles du bilan : justes",
+        ])
+        self.assertEqual(len(lignes), 8)
+        for debut, fin in zip(lignes[5:], ("Contacts nettoyés : ", "Contrôle ligne par ligne : ", "Vos règles et ce passage : ")):
+            self.assertTrue(debut.startswith(fin), debut)
+        self.assertFalse((dossier / "depots").exists(), "la ligne de commande ne dépose rien")
+        # un fichier ET --ouvrir : une phrase claire, rien ne démarre
+        mixte = moulinette(dossier, str(self.EXPORT), "--ouvrir")
+        self.assertEqual(mixte.returncode, 1)
+        self.assertIn("Donnez un fichier, ou --ouvrir", mixte.stderr)
+        liste = moulinette(dossier, "--exclusions", str(dossier / "exclusions.csv"))
+        self.assertEqual(liste.returncode, 1)
+        self.assertIn("exclusions.csv", liste.stderr)
+
+    def test_avant_validation_la_page_bloque_et_ne_livre_rien(self):
+        dossier = self.monter(valider=False)
+        _, port, jeton = self.demarrer(dossier)
+        code, _, donnees = self.deposer(port, jeton, "export-brut-exemple.csv")
+        self.assertEqual(code, 200)
+        self.assertEqual((donnees["ok"], donnees["bloque"]), (False, True))
+        self.assertNotIn("telechargements", donnees)
+        self.assertNotIn("conformes", donnees)
+        self.assertIn("le contrôle avant lancement bloque, rien n'est livré.", donnees["message"])
+        self.assertEqual(donnees["lignes"][0], "Vos règles ne sont pas encore validées.")
+        self.assertFalse(list((dossier / "resultats").glob("*.xlsx")) if (dossier / "resultats").exists() else [], "rien n'est livré")
+        self.assertFalse((dossier / "dernier-passage.json").exists())
+        # les mêmes phrases qu'au terminal
+        ligne = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(ligne.returncode, 2)
+        self.assertEqual(ligne.stdout.splitlines()[2:], donnees["lignes"])
+        self.assertEqual(ligne.stdout.splitlines()[1], "Le contrôle avant lancement bloque : rien n'est livré.")
+
+    def test_les_autres_blocages_sont_dits_avec_ce_qu_il_faut_faire(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        # la liste d'exclusion n'est plus celle qui a été validée
+        (dossier / "exclusions.csv").write_text("Entreprise\nAlpha\nBeta\n", encoding="utf-8")
+        donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
+        self.assertTrue(donnees["bloque"])
+        self.assertIn("La liste d'exclusion n'est plus celle que vous avez validée (3 lignes validées, 2 aujourd'hui).", donnees["lignes"])
+        shutil.copyfile(EXEMPLES / "exclusions-exemple.csv", dossier / "exclusions.csv")
+        # les règles ont changé après la validation
+        mission = self.mission(dossier)
+        mission["configuration"]["regles"][0]["valeur"] = ["Belgique"]
+        self.ecrire_mission(dossier, mission)
+        donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
+        self.assertTrue(donnees["bloque"])
+        self.assertEqual(donnees["lignes"][0], "Vos règles ont changé depuis la validation (mission.json a été modifié après coup).")
+        self.assertFalse((dossier / "resultats").exists() and list((dossier / "resultats").glob("*-nettoye.xlsx")))
+
+    def test_une_colonne_obligatoire_introuvable_est_nommee(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        sans_poste = self.EXPORT.read_text(encoding="utf-8").replace("Poste", "Truc", 1)
+        donnees = self.deposer(port, jeton, "sans-poste.csv", sans_poste.encode("utf-8"))[2]
+        self.assertTrue(donnees["bloque"], donnees)
+        self.assertTrue(any("Il manque dans votre export la colonne « Poste »." == ligne for ligne in donnees["lignes"]), donnees["lignes"])
+        self.assertNotIn("telechargements", donnees)
+
+    def test_une_regle_sans_colonne_est_dite(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        sans_pays = re.sub(r"\bPays\b", "Zone", self.EXPORT.read_text(encoding="utf-8"), count=1)
+        donnees = self.deposer(port, jeton, "sans-pays.csv", sans_pays.encode("utf-8"))[2]
+        self.assertTrue(donnees["ok"], donnees)
+        self.assertEqual(donnees["regles_non_appliquees"], ["Pays"])
+        self.assertEqual(donnees["avertissement"], "Règles non appliquées : votre fichier n'a pas la colonne « Pays ». Les lignes ne sont pas contrôlées sur ces points.")
+
+    def test_un_fichier_illisible_recoit_une_phrase_claire(self):
+        dossier, processus, port, jeton = self.monter_et_demarrer()
+        code, _, donnees = self.deposer(port, jeton, "casse.xlsx", b"PK ceci n'est pas un classeur")
+        self.assertEqual((code, donnees["ok"]), (422, False))
+        self.assertEqual(donnees["erreur"], "Je n'arrive pas à lire ce fichier. Est-ce bien un export .csv ou .xlsx ?")
+        code, _, donnees = self.deposer(port, jeton, "vide.csv", b"\n\n")
+        self.assertEqual((code, donnees["ok"]), (422, False))
+        self.assertTrue(donnees["erreur"])
+        self.assertNotIn("Traceback", donnees["erreur"])
+        self.assertEqual(self.appeler(port, "GET", f"/?t={jeton}")[0], 200, "la page continue de répondre")
+        self.assertEqual(self.deposer(port, jeton, "export-brut-exemple.csv")[2]["conformes"], 11, "et de traiter")
+        self.assertIsNone(processus.poll())
+
+    # --- la sécurité
+
+    def test_le_jeton_est_exige_partout(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        self.deposer(port, jeton, "export-brut-exemple.csv")
+        contenu = self.EXPORT.read_bytes()
+        faux = "x" * len(jeton)
+        for essai in ("", "t=", f"t={faux}", f"t={jeton[:-1]}", f"t={jeton}x", f"T={jeton}", f"nom=a.csv&t={faux}"):
+            with self.subTest(essai=essai):
+                requete = f"?{essai}" if essai else ""
+                self.assertEqual(self.appeler(port, "POST", f"/passer{requete}&nom=a.csv" if requete else "/passer?nom=a.csv", contenu)[0], 403)
+                self.assertEqual(self.appeler(port, "GET", f"/{requete}")[0], 403)
+                self.assertEqual(self.appeler(port, "GET", f"/regles{requete}")[0], 403)
+                self.assertEqual(self.appeler(port, "GET", f"/resultats/export-brut-exemple-nettoye.xlsx{requete}")[0], 403)
+                self.assertEqual(self.appeler(port, "POST", f"/fermer{requete}", b"")[0], 403)
+        self.assertFalse((dossier / "depots" / "a.csv").exists(), "un dépôt refusé n'écrit rien")
+        # le bon jeton passe, et la moulinette tourne encore
+        self.assertEqual(self.appeler(port, "GET", f"/resultats/export-brut-exemple-nettoye.xlsx?t={jeton}")[0], 200)
+
+    def test_un_hote_etranger_est_refuse(self):
+        _, _, port, jeton = self.monter_et_demarrer()
+        for hote in ("evil.example", f"evil.example:{port}", f"127.0.0.1:{port + 1}", "127.0.0.1", f"localhost.evil.example:{port}", f"127.0.0.1.evil.example:{port}", ""):
+            with self.subTest(hote=hote):
+                self.assertEqual(self.appeler(port, "GET", f"/?t={jeton}", entetes={"Host": hote})[0], 403)
+                self.assertEqual(self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", b"x", {"Host": hote})[0], 403)
+                self.assertEqual(self.appeler(port, "GET", f"/regles?t={jeton}", entetes={"Host": hote})[0], 403)
+        for hote in (f"127.0.0.1:{port}", f"localhost:{port}", f"LOCALHOST:{port}"):
+            with self.subTest(hote=hote):
+                self.assertEqual(self.appeler(port, "GET", f"/?t={jeton}", entetes={"Host": hote})[0], 200)
+
+    def test_une_autre_origine_est_refusee(self):
+        _, _, port, jeton = self.monter_et_demarrer()
+        for origine in ("http://evil.example", "null", f"http://127.0.0.1:{port + 1}", "https://127.0.0.1:%d" % port):
+            with self.subTest(origine=origine):
+                code = self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", self.EXPORT.read_bytes(), {"Origin": origine})[0]
+                self.assertEqual(code, 403)
+        for origine in (f"http://127.0.0.1:{port}", f"http://localhost:{port}"):
+            with self.subTest(origine=origine):
+                self.assertEqual(self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", self.EXPORT.read_bytes(), {"Origin": origine})[0], 200)
+
+    def test_aucune_sortie_du_dossier_resultats(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        self.deposer(port, jeton, "export-brut-exemple.csv")
+        secret = "Prospection ESN exemple"
+        self.assertIn(secret, (dossier / "mission.json").read_text(encoding="utf-8"))
+        chemins = [
+            "/resultats/../mission.json", "/resultats/%2e%2e/mission.json", "/resultats/..%2fmission.json", "/resultats/%2e%2e%2fmission.json",
+            "/resultats/..%5cmission.json", "/resultats/..\\mission.json", "/resultats/%2E%2E%2Fmission.json", "/resultats/..%252fmission.json",
+            "/resultats/./../mission.json", "/resultats/sous/dossier.xlsx", "/resultats/", "/resultats", "/resultats//mission.json",
+            "/resultats/....//mission.json", "/resultats/mission.json", "/resultats/%00mission.json", "/resultats/export-brut-exemple-nettoye.xlsx%00.json",
+            "/resultats/C:/Windows/win.ini", "/resultats/export-brut-exemple-nettoye.xlsx::$DATA", "/resultats/export-brut-exemple-nettoye.xlsx.",
+            "/mission.json", "/depots/export-brut-exemple.csv", "/leadlint.py", "//mission.json", "/resultats/nexiste-pas.xlsx",
+        ]
+        for chemin in chemins:
+            with self.subTest(chemin=chemin):
+                code, _, corps = self.appeler(port, "GET", f"{chemin}?t={jeton}")
+                self.assertIn(code, (403, 404), chemin)
+                self.assertNotIn(secret.encode(), corps)
+                self.assertNotIn(b"PK", corps[:2])
+        # le témoin positif : le même serveur sert bien le fichier légitime
+        self.assertEqual(self.appeler(port, "GET", f"/resultats/export-brut-exemple-nettoye.xlsx?t={jeton}")[0], 200)
+
+    def test_extensions_et_taille(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        for nom in ("virus.exe", "script.js", "export", "export.csv.exe", "export.txt", "export.html", ".csv", "export.xls", ""):
+            with self.subTest(nom=nom):
+                code, _, donnees = self.deposer(port, jeton, nom, b"a,b\n1,2\n")
+                self.assertEqual((code, donnees["ok"]), (415, False))
+                self.assertEqual(donnees["erreur"], "Seuls les fichiers .csv, .xlsx et .xlsm sont acceptés.")
+        self.assertFalse((dossier / "depots").exists(), "un fichier refusé n'est pas gardé")
+        code, _, donnees = self.deposer(port, jeton, "gros.csv", b"x" * (s.TAILLE_MAX_DEPOT + 1))
+        self.assertEqual((code, donnees["ok"]), (413, False))
+        self.assertIn("50 Mo", donnees["erreur"])
+        self.assertFalse((dossier / "depots" / "gros.csv").exists())
+        code, _, donnees = self.deposer(port, jeton, "vide.csv", b"")
+        self.assertEqual((code, donnees["ok"]), (400, False))
+        self.assertEqual(self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", None)[0], 400, "un corps vide")
+        for longueur in ("", "Content-Length: abc\r\n", "Content-Length: -5\r\n"):  # pas de taille lisible, ou une taille négative
+            with socket.create_connection(("127.0.0.1", port), timeout=10) as brut:
+                brut.sendall(f"POST /passer?t={jeton}&nom=a.csv HTTP/1.0\r\nHost: 127.0.0.1:{port}\r\n{longueur}\r\n".encode("ascii"))
+                reponse = b""
+                while True:
+                    morceau = brut.recv(4096)
+                    if not morceau:
+                        break
+                    reponse += morceau
+            self.assertRegex(reponse.split(b"\r\n")[0].decode("ascii"), r"HTTP/1\.\d (411|400)", longueur)
+        for extension in ("csv", "XLSX", "xlsm"):
+            self.assertEqual(s.assainir_nom_depot(f"a.{extension}"), f"a.{extension.lower()}")
+
+    def test_les_noms_pieges_sont_assainis(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        cas = {
+            "../../x.csv": "x.csv", "..\\..\\y.csv": "y.csv", "<script>.csv": "script.csv", 'a"b|c?.csv': "abc.csv", "C:\\Windows\\z.csv": "z.csv",
+            "con.csv": "_con.csv", "sous/dossier/w.csv": "w.csv", "  espaces .csv": "espaces.csv", "a..b...csv": "a.b.csv", "é à ç.csv": "é à ç.csv",
+        }
+        for brut, assaini in cas.items():
+            with self.subTest(brut=brut):
+                self.assertEqual(s.assainir_nom_depot(brut), assaini)
+                code, _, donnees = self.deposer(port, jeton, brut)
+                self.assertEqual(code, 200)
+                self.assertEqual(donnees["fichier"], assaini)
+                self.assertNotIn("<", json.dumps(donnees))
+        self.assertEqual({p.name for p in (dossier / "depots").iterdir()}, set(cas.values()))
+        self.assertEqual({p.name for p in dossier.parent.iterdir()} & {"x.csv", "y.csv", "z.csv", "w.csv"}, set(), "rien n'est écrit hors du dossier de dépôt")
+        self.assertEqual({p.name for p in dossier.iterdir()} & {"x.csv", "y.csv", "z.csv"}, set())
+        for nom in ("script-nettoye.xlsx", "x-nettoye.xlsx"):
+            self.assertTrue((dossier / "resultats" / nom).is_file(), nom)
+
+    def test_le_serveur_n_ecoute_que_sur_127_0_0_1(self):
+        _, _, port, jeton = self.monter_et_demarrer()
+        try:
+            autres = {a[4][0] for a in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET) if not a[4][0].startswith("127.")}
+        except OSError:
+            autres = set()
+        if not autres:
+            self.skipTest("aucune autre adresse IPv4 sur cette machine")
+        for adresse in autres:
+            with self.subTest(adresse=adresse):
+                with self.assertRaises(OSError):
+                    socket.create_connection((adresse, port), timeout=3).close()
+        self.assertEqual(self.appeler(port, "GET", f"/?t={jeton}")[0], 200)
+
+    # --- la vie du serveur
+
+    def test_fermer_arrete_le_serveur_et_la_sortie_reste_sobre(self):
+        dossier, processus, port, jeton = self.monter_et_demarrer()
+        self.assertEqual(self.appeler(port, "GET", f"/nexiste-pas?t={jeton}")[0], 404)
+        self.assertEqual(self.appeler(port, "GET", "/")[0], 403)
+        self.deposer(port, jeton, "export-brut-exemple.csv")
+        code, _, corps = self.appeler(port, "POST", f"/fermer?t={jeton}", b"")
+        self.assertEqual((code, json.loads(corps)), (200, {"ok": True}))
+        self.assertEqual(processus.wait(timeout=20), 0)
+        reste = processus.stdout.read().splitlines()
+        self.assertEqual(reste, ["Passage : export-brut-exemple.csv · 30 lignes · gardées 11 · à vérifier 0 · rejetées 19.", "Moulinette fermée."])
+        self.assertEqual(processus.stderr.read(), "")
+        self.assertEqual(self.ligne_ouverture, f"Ouvrez cette adresse dans votre navigateur : http://127.0.0.1:{port}/?t={jeton}. Ctrl+C pour fermer.")
+        with self.assertRaises(OSError):
+            socket.create_connection(("127.0.0.1", port), timeout=3).close()
+
+    def test_ouvrir_demarre_aussi_le_serveur_et_chaque_lancement_a_son_jeton(self):
+        dossier = self.monter()
+        premier, port1, jeton1 = self.demarrer(dossier, "--ouvrir")
+        second, port2, jeton2 = self.demarrer(dossier)
+        self.assertNotEqual(jeton1, jeton2)
+        self.assertNotEqual(port1, port2)
+        self.assertGreaterEqual(len(jeton1), 24)
+        self.assertEqual(self.appeler(port2, "GET", f"/?t={jeton1}")[0], 403, "le jeton d'un lancement n'ouvre pas l'autre")
+        self.assertEqual(self.appeler(port1, "GET", f"/?t={jeton1}")[0], 200)
+
+    def test_sans_mission_la_page_ne_demarre_pas(self):
+        dossier = self.monter()
+        (dossier / "mission.json").unlink()
+        processus = moulinette(dossier)
+        self.assertEqual(processus.returncode, 1)
+        self.assertIn("mission.json est introuvable", processus.stderr)
+        self.assertNotIn("Traceback", processus.stderr)
+
+
 class Emballage(Banc):
     def test_pyproject_declare_la_commande_et_le_fichier(self):
         try:
@@ -727,7 +1197,7 @@ class Emballage(Banc):
         for nom in (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json"):
             donnees = json.loads((RACINE / nom).read_text(encoding="utf-8"))
             self.assertEqual(donnees.get("version") or donnees["metadata"]["version"], m.VERSION, nom)
-        self.assertEqual(m.VERSION, "1.4.0")
+        self.assertEqual(m.VERSION, "1.5.0")
         self.assertEqual(s.VERSION, m.VERSION)
 
     def test_la_competence_est_bien_formee(self):
@@ -740,6 +1210,9 @@ class Emballage(Banc):
             self.assertIn(declencheur, entete)
         for commande in ("CLAUDE_PLUGIN_ROOT", "uvx --from git+https://github.com/Gremelinn0/sales-leadlint leadlint-setup", "validate", "--force"):
             self.assertIn(commande, texte)
+        for lanceur in ("Ouvrir la moulinette.bat", "ouvrir-la-moulinette.command", "no agent and no terminal"):
+            self.assertIn(lanceur, texte)
+        self.assertIn("Ouvrir la moulinette", (RACINE / "README.md").read_text(encoding="utf-8"))
         moteur = (RACINE / "skills" / "leadlint" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("leadlint-setup", moteur.split("## When to use it")[1].split("\n")[2], "la compétence du moteur renvoie vers l'agent de setup")
 

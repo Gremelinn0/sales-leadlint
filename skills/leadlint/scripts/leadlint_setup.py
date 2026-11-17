@@ -5,7 +5,7 @@
 Three commands:
 
   create    reads the answers (reponses.json) and writes a folder: mission.json, matrice.json,
-            leadlint.py, moulinette.py (your script), regles.html (your rules in plain French).
+            leadlint.py, moulinette.py (your script), two double-click launchers, regles.html (your rules in plain French).
   validate  records the HUMAN validation of the rules (date and signature). Run it only when the
             person has explicitly agreed to their rules, after reading regles.html.
   page      writes regles.html again from mission.json (and the last pass, if any).
@@ -14,10 +14,11 @@ Examples:
 
   leadlint-setup create reponses.json -o ma-moulinette --exclusions clients.csv
   leadlint-setup validate ma-moulinette
-  python ma-moulinette/moulinette.py export.csv
+  python ma-moulinette/moulinette.py export.csv   (or double-click « Ouvrir la moulinette » and drop the file on the page)
 
 Nothing leaves the machine: no account, no network call. The folder it writes is self-sufficient
 (it holds its own copy of the engine, leadlint.py), so it keeps working wherever you move it.
+The page that takes the dropped file is a small local server (127.0.0.1 only, standard library only).
 Messages and files written for the person are in French.
 
 Exit codes: 0 done · 1 unreadable input or invalid answers · 2 (the script, not this tool) preflight blocked.
@@ -30,13 +31,19 @@ import contextlib
 import copy
 import datetime as dt
 import hashlib
+import hmac
 import html
+import http.server
 import io
 import json
 import math
 import os
 import re
+import secrets
 import sys
+import threading
+import urllib.parse
+import webbrowser
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -382,7 +389,9 @@ GABARIT_MOULINETTE = '''#!/usr/bin/env python3
 # Cibles : __CIBLES__
 # Créée le __DATE__ · généré par leadlint-setup, ne dépend d'aucun compte et n'appelle aucun réseau.
 #
-# Usage : python moulinette.py <export.csv|xlsx> [--exclusions <fichier>]
+# Usage : double-cliquez sur « Ouvrir la moulinette » (Windows) ou « ouvrir-la-moulinette.command » (Mac),
+#         puis glissez votre export dans la page qui s'ouvre. Ou, en ligne de commande :
+#         python moulinette.py <export.csv|xlsx> [--exclusions <fichier>]
 #
 # Ce script lance le moteur qui est dans ce dossier (leadlint.py, leadlint_setup.py) avec vos règles
 # (mission.json, matrice.json). Il ne livre rien tant que vous n'avez pas relu et validé vos règles
@@ -433,8 +442,9 @@ def creer(chemin_reponses: Path, dossier: Path, exclusions: Any = None, force: b
     _copier(Path(leadlint.__file__), dossier / "leadlint.py")
     _copier(Path(__file__), dossier / "leadlint_setup.py")
     _ecrire_texte(dossier / "moulinette.py", texte_moulinette(reponses, dt.date.today().isoformat()))
+    lanceurs = _ecrire_lanceurs(dossier)
     _copier(chemin_reponses, dossier / "reponses.json")
-    fichiers = ["mission.json", "matrice.json", "leadlint.py", "leadlint_setup.py", "moulinette.py", "regles.html", "reponses.json"]
+    fichiers = ["mission.json", "matrice.json", "leadlint.py", "leadlint_setup.py", "moulinette.py", *lanceurs, "regles.html", "reponses.json"]
     if exclusions is not None:
         fichiers.append(_poser_liste_exclusion(dossier, exclusions).name)
     ecrire_page(dossier)
@@ -712,6 +722,26 @@ def _colonnes_texte(colonnes: list) -> str:
     return f"la colonne {noms}" if len(uniques) == 1 else f"les colonnes {noms}"
 
 
+def _lignes_causes(causes: Any) -> list:
+    """[(texte, nombre)] : les huit causes les plus fréquentes (rejetés puis à vérifier), puis « N autres causes »."""
+    causes = causes if isinstance(causes, dict) else {}
+    brutes: list = []
+    for statut in ("Rejeté", "À vérifier"):
+        detail = causes.get(statut)
+        if isinstance(detail, dict):
+            brutes += [(cause, n, statut) for cause, n in detail.items() if isinstance(n, int)]
+    brutes.sort(key=lambda t: -t[1])
+    visibles, reste = brutes[:8], brutes[8:]
+    sortie = [(_sans_cadratin(cause) + (" (à vérifier)" if statut == "À vérifier" else ""), n) for cause, n, statut in visibles]
+    if reste:
+        sortie.append((f"{len(reste)} autres causes", sum(n for _, n, _ in reste)))
+    return sortie
+
+
+def _phrase_non_appliquees(colonnes: list) -> str:
+    return f"Règles non appliquées : votre fichier n'a pas {_colonnes_texte(colonnes)}. Les lignes ne sont pas contrôlées sur ces points."
+
+
 def _section_passage(passage: Any, configuration: dict) -> str:
     if not isinstance(passage, dict):
         return '<section><h2>Dernier passage</h2><div class="carte"><p class="vide">Aucun fichier passé pour l\'instant.</p></div></section>'
@@ -726,17 +756,7 @@ def _section_passage(passage: Any, configuration: dict) -> str:
     )
     chiffres = "".join(f'<div class="chiffre {classe}"><span class="nombre">{n}</span><span class="legende">{libelle}</span></div>' for classe, n, libelle in tuiles)
     origine = f"{_e(passage.get('fichier', ''))}" + (f" · passé le {_e(_date_fr(passage['date']))}" if passage.get("date") else "")
-    causes = passage.get("causes") if isinstance(passage.get("causes"), dict) else {}
-    lignes_causes: list = []
-    for statut in ("Rejeté", "À vérifier"):
-        detail = causes.get(statut)
-        if isinstance(detail, dict):
-            lignes_causes += [(cause, n, statut) for cause, n in detail.items() if isinstance(n, int)]
-    lignes_causes.sort(key=lambda t: -t[1])
-    visibles, reste = lignes_causes[:8], lignes_causes[8:]
-    li_causes = "".join(f"<li><span>{_e(_sans_cadratin(cause))}{' (à vérifier)' if statut == 'À vérifier' else ''}</span><b>{n}</b></li>" for cause, n, statut in visibles)
-    if reste:
-        li_causes += f"<li><span>{len(reste)} autres causes</span><b>{sum(n for _, n, _ in reste)}</b></li>"
+    li_causes = "".join(f"<li><span>{_e(texte)}</span><b>{n}</b></li>" for texte, n in _lignes_causes(passage.get("causes")))
     par_cible = passage.get("par_cible") if isinstance(passage.get("par_cible"), dict) else {}
     li_cibles = "".join(f"<li><span>{_e(cible)}</span><b>{n}</b></li>" for cible, n in par_cible.items() if isinstance(n, int))
     bloc_causes = f'<div class="carte"><h3>Pourquoi des lignes sont écartées</h3><ul class="compte">{li_causes or "<li><span>Aucune ligne écartée.</span></li>"}</ul></div>'
@@ -745,8 +765,7 @@ def _section_passage(passage: Any, configuration: dict) -> str:
     non_appliquees = passage.get("regles_non_appliquees")
     if isinstance(non_appliquees, list) and non_appliquees:
         colonnes = [str(r.get("colonne") or r.get("libelle")) for r in non_appliquees if isinstance(r, dict)]
-        encarts += (f'<div class="encart">Règles non appliquées : votre fichier n\'a pas {_e(_colonnes_texte(colonnes))}. '
-                    "Les lignes ne sont pas contrôlées sur ces points.</div>")
+        encarts += f'<div class="encart">{_e(_phrase_non_appliquees(colonnes))}</div>'
     signature = passage.get("signature_regles")
     if signature and signature != leadlint.empreinte_regles(configuration):
         encarts += '<div class="encart doux">Ce passage date d\'avant votre dernière modification des règles.</div>'
@@ -799,8 +818,9 @@ def rendre_page(identite: dict, configuration: dict, cibles: list, passage: Any 
         f'<section><h2>Ce qu\'on garde, ce qu\'on écarte</h2><div class="familles">{cartes_familles}</div></section>\n'
         f"{_section_passage(passage, configuration)}\n"
         '<section><h2>Comment s\'en servir</h2><div class="carte"><ol class="etapes">'
-        "<li>Passez votre export avec <code>python moulinette.py mon-export.csv</code>.</li>"
-        "<li>Les résultats arrivent dans le dossier <code>resultats</code> : le fichier se terminant par <code>-nettoye.xlsx</code> contient les contacts gardés, avec leur cible.</li>"
+        "<li>Double-cliquez sur <code>Ouvrir la moulinette</code> (sur Mac : <code>ouvrir-la-moulinette.command</code>), puis glissez votre export dans la page qui s'ouvre.</li>"
+        "<li>Vous préférez la ligne de commande ? Passez votre export avec <code>python moulinette.py mon-export.csv</code>.</li>"
+        "<li>Vos contacts nettoyés se téléchargent depuis la page, et sont aussi dans le dossier <code>resultats</code> : le fichier se terminant par <code>-nettoye.xlsx</code> contient les contacts gardés, avec leur cible.</li>"
         f"<li>Pour changer une règle, demandez à votre agent : « change mes règles LeadLint ».</li>{note_liste}"
         "</ol></div></section>\n"
         f'<footer><a href="{DEPOT}" rel="noopener">leadlint</a> · gratuit, local, vos fichiers ne quittent pas votre ordinateur · Zero Gravity AI</footer>\n'
@@ -898,8 +918,11 @@ def _causes_texte(causes: dict) -> str:
     return " · ".join(f"{_sans_cadratin(cause)} {n}" for cause, n in causes.items()) or "aucune"
 
 
-def passer(dossier: Path, export: Path, exclusions: Any = None) -> int:
-    """Une passe : contrôle avant lancement, vérification de chaque ligne, fichier nettoyé avec sa cible, bilan."""
+def executer_passe(dossier: Path, export: Path, exclusions: Any = None) -> dict:
+    """Une passe : contrôle avant lancement, vérification de chaque ligne, fichier nettoyé avec sa cible, bilan.
+
+    Rend les données (rien n'est écrit sur la sortie) : la ligne de commande et la page locale les présentent chacune à leur façon.
+    """
     dossier = dossier.resolve()
     chemin_mission = dossier / "mission.json"
     if not chemin_mission.is_file():
@@ -914,10 +937,7 @@ def passer(dossier: Path, export: Path, exclusions: Any = None) -> int:
         commande += ["--exclusions", str(exclusions)]
     code, bilan = _lancer_moteur(commande)
     if code == 2 or not bilan.get("livre"):
-        sortie = [f"« {nom} » · {export.name}", "Le contrôle avant lancement bloque : rien n'est livré."]
-        sortie += _expliquer_blocage(dossier, configuration, export, exclusions, bilan)
-        sys.stdout.write("\n".join(sortie) + "\n")
-        return 2
+        return {"bloque": True, "nom": nom, "export": export.name, "lignes": _expliquer_blocage(dossier, configuration, export, exclusions, bilan)}
     justes = all(bilan["invariants"].values())
     matrice = _lire_json(dossier / "matrice.json")
     try:
@@ -962,34 +982,612 @@ def passer(dossier: Path, export: Path, exclusions: Any = None) -> int:
     }
     _ecrire_json(dossier / "dernier-passage.json", passage)
     page = ecrire_page(dossier)
+    return {
+        "bloque": False, "nom": nom, "export": export.name, "bilan": bilan, "justes": justes, "passage": passage,
+        "non_appliquees": non_appliquees, "nettoye": nettoye, "controle_qa": dossier / fichiers["controle_qa"], "page": page,
+    }
+
+
+def passer(dossier: Path, export: Path, exclusions: Any = None) -> int:
+    """Une passe en ligne de commande : le bilan est écrit en clair ; le code de sortie dit juste (0), bloqué (2) ou faux (1)."""
+    passe = executer_passe(dossier, export, exclusions)
+    if passe["bloque"]:
+        sortie = [f"« {passe['nom']} » · {export.name}", "Le contrôle avant lancement bloque : rien n'est livré."] + passe["lignes"]
+        sys.stdout.write("\n".join(sortie) + "\n")
+        return 2
+    bilan, passage, non_appliquees = passe["bilan"], passe["passage"], passe["non_appliquees"]
     sortie = [
-        f"« {nom} » · {export.name}",
+        f"« {passe['nom']} » · {export.name}",
         f"Lignes {bilan['total']} · gardées {bilan['conformes']} · à vérifier {bilan['a_verifier']} · rejetées {bilan['rejetes']}",
         f"Rejetées, par cause : {_causes_texte(bilan['causes']['Rejeté'])}",
         f"Gardées, par cible : {_causes_texte(passage['par_cible'])}",
-        f"Contrôles du bilan : {'justes' if justes else 'FAUX'}",
+        f"Contrôles du bilan : {'justes' if passe['justes'] else 'FAUX'}",
     ]
     if bilan["causes"]["À vérifier"]:
         sortie.insert(3, f"À vérifier, par cause : {_causes_texte(bilan['causes']['À vérifier'])}")
     if non_appliquees:
         sortie.append(f"Règles non appliquées, faute de colonne dans votre export : {', '.join(dict.fromkeys(r['colonne'] for r in non_appliquees))}.")
-    sortie += [f"Contacts nettoyés : {nettoye}", f"Contrôle ligne par ligne : {(dossier / fichiers['controle_qa'])}", f"Vos règles et ce passage : {page}"]
+    sortie += [f"Contacts nettoyés : {passe['nettoye']}", f"Contrôle ligne par ligne : {passe['controle_qa']}", f"Vos règles et ce passage : {passe['page']}"]
     sys.stdout.write("\n".join(sortie) + "\n")
-    return 0 if justes else 1
+    return 0 if passe["justes"] else 1
+
+
+# --------------------------------------------------------------------------- la page de dépôt, en local
+#
+# `python moulinette.py` sans fichier ouvre une page dans le navigateur : on y glisse son export, on récupère son fichier nettoyé.
+# Un petit serveur de la bibliothèque standard, lié à 127.0.0.1 seulement, qui tourne le temps de la session.
+
+EXTENSIONS_DEPOT = {".csv", ".xlsx", ".xlsm"}
+TAILLE_MAX_DEPOT = 50 * 1024 * 1024
+VARIABLE_SANS_NAVIGATEUR = "LEADLINT_SANS_NAVIGATEUR"
+RESERVES_WINDOWS = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
+TYPES_FICHIERS = {
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
+    ".csv": "text/csv; charset=utf-8",
+}
+POLITIQUE_CONTENU = (
+    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src data:; "
+    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+)
+LANCEUR_WINDOWS = "Ouvrir la moulinette.bat"
+LANCEUR_MAC = "ouvrir-la-moulinette.command"
+
+# Les lanceurs pour un double-clic. Le .bat ne contient que de l'ASCII : aucune page de code ne peut le déformer.
+TEXTE_LANCEUR_WINDOWS = """@echo off
+rem Double-clic : ouvre la moulinette dans votre navigateur.
+cd /d "%~dp0"
+py -3 -c "import sys" >nul 2>nul
+if not errorlevel 1 (
+  py -3 moulinette.py --ouvrir
+  if errorlevel 1 pause
+  exit /b
+)
+python -c "import sys" >nul 2>nul
+if not errorlevel 1 (
+  python moulinette.py --ouvrir
+  if errorlevel 1 pause
+  exit /b
+)
+echo.
+echo Python n'est pas installe sur cet ordinateur.
+echo Installez-le depuis https://www.python.org/downloads/ puis double-cliquez de nouveau sur ce fichier.
+echo.
+pause
+"""
+
+TEXTE_LANCEUR_MAC = """#!/bin/bash
+# Double-clic : ouvre la moulinette dans votre navigateur.
+cd "$(dirname "$0")" || exit 1
+if command -v python3 >/dev/null 2>&1; then
+  python3 moulinette.py --ouvrir
+  statut=$?
+else
+  echo "Python 3 n'est pas installé sur cet ordinateur."
+  echo "Installez-le depuis https://www.python.org/downloads/ puis double-cliquez de nouveau sur ce fichier."
+  statut=1
+fi
+if [ "$statut" -ne 0 ]; then
+  echo
+  read -r -p "Appuyez sur Entrée pour fermer cette fenêtre. " _
+fi
+exit "$statut"
+"""
+
+
+def _ecrire_lanceurs(dossier: Path) -> list:
+    """Les deux fichiers à double-cliquer. Rend leurs noms."""
+    _ecrire_octets(dossier / LANCEUR_WINDOWS, TEXTE_LANCEUR_WINDOWS.replace("\n", "\r\n").encode("ascii"))
+    mac = dossier / LANCEUR_MAC
+    _ecrire_texte(mac, TEXTE_LANCEUR_MAC)
+    try:
+        os.chmod(mac, 0o755)
+    except OSError:  # pragma: no cover - dépend du système de fichiers (le bit exécutable n'existe pas partout)
+        pass
+    return [LANCEUR_WINDOWS, LANCEUR_MAC]
+
+
+def assainir_nom_depot(brut: Any) -> str:
+    """Le nom sous lequel un fichier déposé est gardé : aucun séparateur, aucun caractère interdit, une extension permise."""
+    nom = str(brut or "").replace("\\", "/").split("/")[-1]
+    nom = re.sub(r'[\x00-\x1f\x7f<>:"|?*]', "", nom)
+    nom = re.sub(r"\s+", " ", nom).strip(" .")
+    nom = re.sub(r"\.{2,}", ".", nom)
+    extension = Path(nom).suffix.lower()
+    if extension not in EXTENSIONS_DEPOT:
+        raise ErreurEntree("Seuls les fichiers .csv, .xlsx et .xlsm sont acceptés.")
+    racine = nom[: -len(extension)].strip(" .")[:100] or "export"
+    if racine.upper() in RESERVES_WINDOWS:
+        racine = "_" + racine
+    return racine + extension
+
+
+def _phrase_liste(dossier: Path, configuration: dict) -> tuple:
+    """(classe, phrase) : l'état de la liste d'exclusion, tel que la personne le lit sur la page de dépôt."""
+    if not _liste_exclusion_requise(configuration):
+        return "doux", "Liste d'exclusion : aucune."
+    fichier = _trouver_exclusions(dossier)
+    if fichier is None:
+        return "alerte", "Liste d'exclusion : introuvable. Posez-la dans ce dossier sous le nom exclusions.csv."
+    etat = _etat_liste(dossier, configuration)
+    volume = configuration["blacklist"].get("volumeAttendu")
+    if etat == "ok":
+        return "ok", f"Liste d'exclusion : {fichier.name}, {volume} lignes validées."
+    if etat == "modifiee":
+        return "alerte", f"Liste d'exclusion : {fichier.name} a changé depuis la validation. Revalidez vos règles."
+    return "alerte", f"Liste d'exclusion : {fichier.name}, pas encore validée."
+
+
+CSS_DEPOT = """
+:root{--bouton-texte:#ffffff}
+@media (prefers-color-scheme:dark){:root{--bouton-texte:#06222a}}
+.depot{display:block;position:relative;margin-top:1.4rem;padding:2.6rem 1rem;border:2px dashed var(--accent);border-radius:16px;background:var(--accent-fond);color:var(--accent);text-align:center;cursor:pointer;font-weight:700;font-size:1.2rem}
+.depot small{display:block;margin-top:.5rem;font-weight:400;font-size:.9rem;color:var(--doux)}
+.depot input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.depot.survol,.depot:focus-within{background:var(--carte);border-style:solid}
+.depot.occupe{cursor:progress;opacity:.7}
+.liste{margin-top:1rem;font-size:.95rem}
+.liste-ok{color:var(--ok)}
+.liste-alerte{color:var(--alerte);font-weight:600}
+.liste-doux{color:var(--doux)}
+.encart.ko{background:var(--ko-fond);color:var(--ko)}
+.encart p{margin:.25rem 0;font-weight:400}
+.encart p.titre{font-weight:700}
+.encart p.suite{padding-left:1rem;font-size:.92rem}
+#resultat{margin-top:1.6rem}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:1.2rem}
+.bouton{display:inline-block;padding:.75rem 1.2rem;border-radius:10px;background:var(--accent);color:var(--bouton-texte);font-weight:700;text-decoration:none}
+.bouton.secondaire{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+.pied{display:flex;flex-wrap:wrap;gap:1.2rem;align-items:center;margin-top:2.4rem}
+.pied a,button.lien{color:var(--accent);font:inherit;font-weight:600}
+button.lien{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+"""
+
+SCRIPT_DEPOT = r"""
+(function () {
+  var jeton = document.body.getAttribute("data-jeton");
+  var zone = document.getElementById("depot");
+  var choix = document.getElementById("fichier");
+  var sortie = document.getElementById("resultat");
+  var MAX = 50 * 1024 * 1024;
+  var PERMIS = /\.(csv|xlsx|xlsm)$/i;
+  var occupe = false;
+
+  function el(balise, classe, texte) {
+    var n = document.createElement(balise);
+    if (classe) { n.className = classe; }
+    if (texte !== undefined && texte !== null) { n.textContent = texte; }
+    return n;
+  }
+  function vider(n) { while (n.firstChild) { n.removeChild(n.firstChild); } }
+  function encart(type, titre, lignes) {
+    var d = el("div", "encart " + type);
+    if (titre) { d.appendChild(el("p", "titre", titre)); }
+    (lignes || []).forEach(function (l) {
+      var suite = /^\s/.test(l);
+      d.appendChild(el("p", suite ? "suite" : "", suite ? l.replace(/^\s+/, "") : l));
+    });
+    return d;
+  }
+  function dire(type, titre, lignes) { vider(sortie); sortie.appendChild(encart(type, titre, lignes)); }
+  function bloc(titre, lignes, vide) {
+    var carte = el("div", "carte");
+    carte.appendChild(el("h3", "", titre));
+    var liste = el("ul", "compte");
+    if (!lignes.length) { liste.appendChild(el("li", "", vide)); }
+    lignes.forEach(function (l) {
+      var li = el("li");
+      li.appendChild(el("span", "", l[0]));
+      li.appendChild(el("b", "", String(l[1])));
+      liste.appendChild(li);
+    });
+    carte.appendChild(liste);
+    return carte;
+  }
+  function bouton(info, classe, libelle) {
+    var a = el("a", "bouton " + classe, libelle);
+    a.href = info.url;
+    a.setAttribute("download", info.nom);
+    return a;
+  }
+  function montrer(d) {
+    vider(sortie);
+    var chiffres = el("div", "chiffres");
+    [["chiffre-ok", d.conformes, "Gardés"], ["chiffre-verifier", d.a_verifier, "À vérifier"], ["chiffre-rejete", d.rejetes, "Rejetés"]].forEach(function (t) {
+      var c = el("div", "chiffre " + t[0]);
+      c.appendChild(el("span", "nombre", String(t[1])));
+      c.appendChild(el("span", "legende", t[2]));
+      chiffres.appendChild(c);
+    });
+    sortie.appendChild(chiffres);
+    sortie.appendChild(el("p", "total", "sur " + d.total + " lignes · " + d.fichier));
+    var deux = el("div", "deux");
+    deux.appendChild(bloc("Pourquoi des lignes sont écartées", d.causes, "Aucune ligne écartée."));
+    deux.appendChild(bloc("Gardés, par cible", d.par_cible, "Aucun contact gardé."));
+    sortie.appendChild(deux);
+    if (d.avertissement) { sortie.appendChild(encart("", "", [d.avertissement])); }
+    if (!d.justes) { sortie.appendChild(encart("ko", "Les contrôles du bilan ne tombent pas juste.", ["Ne livrez pas ce fichier : signalez-le."])); }
+    var actions = el("div", "actions");
+    actions.appendChild(bouton(d.telechargements.nettoye, "", "Télécharger mes contacts nettoyés (.xlsx)"));
+    actions.appendChild(bouton(d.telechargements.controle, "secondaire", "Le contrôle ligne par ligne (.xlsx)"));
+    sortie.appendChild(actions);
+  }
+  function envoyer(fichier, plusieurs) {
+    if (occupe) { return; }
+    if (!PERMIS.test(fichier.name)) { dire("ko", "Ce fichier n'est pas un export que je sais lire.", ["Déposez un fichier .csv, .xlsx ou .xlsm."]); return; }
+    if (fichier.size === 0) { dire("ko", "Ce fichier est vide.", []); return; }
+    if (fichier.size > MAX) { dire("ko", "Ce fichier dépasse 50 Mo.", ["Découpez votre export en plusieurs fichiers."]); return; }
+    occupe = true;
+    zone.classList.add("occupe");
+    dire("doux", "Je traite « " + fichier.name + " »…", plusieurs ? ["Un seul fichier à la fois : les autres sont ignorés."] : []);
+    fetch("/passer?t=" + encodeURIComponent(jeton) + "&nom=" + encodeURIComponent(fichier.name), { method: "POST", body: fichier })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, erreur: "La réponse de la moulinette est illisible." }; }); })
+      .then(function (d) {
+        if (d.ok) { montrer(d); }
+        else if (d.bloque) { dire("ko", d.message, d.lignes); }
+        else { dire("ko", d.erreur || "Ce fichier n'a pas pu être traité.", []); }
+      })
+      .catch(function () { dire("ko", "La moulinette ne répond plus.", ["Elle a peut-être été fermée : double-cliquez de nouveau sur « Ouvrir la moulinette »."]); })
+      .then(function () { occupe = false; zone.classList.remove("occupe"); choix.value = ""; });
+  }
+
+  choix.addEventListener("change", function () { if (choix.files.length) { envoyer(choix.files[0], choix.files.length > 1); } });
+  ["dragenter", "dragover"].forEach(function (nom) {
+    zone.addEventListener(nom, function (e) { e.preventDefault(); zone.classList.add("survol"); });
+  });
+  ["dragleave", "drop"].forEach(function (nom) {
+    zone.addEventListener(nom, function () { zone.classList.remove("survol"); });
+  });
+  zone.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var fichiers = e.dataTransfer && e.dataTransfer.files;
+    if (fichiers && fichiers.length) { envoyer(fichiers[0], fichiers.length > 1); }
+  });
+  window.addEventListener("dragover", function (e) { e.preventDefault(); });
+  window.addEventListener("drop", function (e) { e.preventDefault(); });
+
+  document.getElementById("fermer").addEventListener("click", function () {
+    fetch("/fermer?t=" + encodeURIComponent(jeton), { method: "POST" }).catch(function () {}).then(function () {
+      var page = document.querySelector("main");
+      vider(page);
+      page.appendChild(el("h1", "", "Moulinette fermée"));
+      page.appendChild(el("p", "pour", "Vous pouvez fermer cet onglet. Pour recommencer, double-cliquez de nouveau sur « Ouvrir la moulinette »."));
+    });
+  });
+})();
+"""
+
+
+def rendre_accueil(identite: dict, configuration: dict, etat_liste: str, phrase_liste: tuple, jeton: str) -> str:
+    """La page « Déposez votre export »."""
+    nom = identite.get("mission") or "Ma prospection"
+    pour = identite.get("client")
+    etat, texte_sceau = _sceau(configuration, etat_liste)
+    classe_liste, texte_liste = phrase_liste
+    adresse_regles = "/regles?t=" + urllib.parse.quote(jeton)
+    return (
+        '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="light dark">\n'
+        '<meta name="referrer" content="no-referrer">\n'
+        f"<title>Moulinette : {_e(nom)}</title>\n<style>{CSS}{CSS_DEPOT}</style>\n</head>\n"
+        f'<body data-jeton="{_e(jeton)}">\n<main>\n'
+        f'<header><p class="surtitre">Votre moulinette</p><h1>{_e(nom)}</h1>'
+        + (f'<p class="pour">pour {_e(pour)}</p>' if pour else "")
+        + f'<p class="sceau sceau-{etat}"><span class="point"></span><span>{_e(texte_sceau)}</span></p></header>\n'
+        '<section><label class="depot" id="depot"><span>Glissez votre export ici (.csv ou .xlsx) ou cliquez pour le choisir</span>'
+        '<small>Le fichier reste sur votre ordinateur.</small>'
+        '<input type="file" id="fichier" accept=".csv,.xlsx,.xlsm"></label>\n'
+        f'<p class="liste liste-{classe_liste}">{_e(texte_liste)}</p>\n'
+        '<noscript><div class="encart ko">Cette page a besoin de JavaScript pour recevoir votre fichier. '
+        "Sinon, utilisez la ligne de commande : python moulinette.py mon-export.csv</div></noscript></section>\n"
+        '<section id="resultat" aria-live="polite"></section>\n'
+        f'<div class="pied"><a href="{_e(adresse_regles)}" target="_blank" rel="noopener">Voir mes règles</a>'
+        '<button type="button" class="lien" id="fermer">Fermer la moulinette</button></div>\n'
+        f'<footer><a href="{DEPOT}" rel="noopener">leadlint</a> · gratuit, local, vos fichiers ne quittent pas votre ordinateur · Zero Gravity AI</footer>\n'
+        f"</main>\n<script>{SCRIPT_DEPOT}</script>\n</body>\n</html>\n"
+    )
+
+
+class GestionnaireMoulinette(http.server.BaseHTTPRequestHandler):
+    """Une requête : on contrôle l'adresse (Host), l'origine et le jeton avant toute chose."""
+
+    server_version = "leadlint"
+    sys_version = ""
+    timeout = 120
+    _corps_lu = False
+
+    def log_message(self, format, *args):  # noqa: A002 - signature imposée ; le terminal reste silencieux
+        return
+
+    # --- réponses
+
+    def _envoyer(self, code: int, type_contenu: str, octets: bytes, entetes: Any = None) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", type_contenu)
+        self.send_header("Content-Length", str(len(octets)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", POLITIQUE_CONTENU)
+        for cle, valeur in (entetes or {}).items():
+            self.send_header(cle, valeur)
+        self.end_headers()
+        self.wfile.write(octets)
+        self.close_connection = True
+
+    def _json(self, code: int, donnees: dict) -> None:
+        self._envoyer(code, "application/json; charset=utf-8", json.dumps(donnees, ensure_ascii=False).encode("utf-8"))
+
+    def _vider_corps(self) -> None:
+        """Lit (sans le garder) le corps d'une requête refusée : le navigateur reçoit alors le refus, pas une coupure."""
+        if self._corps_lu:
+            return
+        self._corps_lu = True
+        self.connection.settimeout(5)  # un client qui promet un corps sans l'envoyer ne retient pas le serveur
+        try:
+            restant = min(int(self.headers.get("Content-Length") or 0), TAILLE_MAX_DEPOT + 1)
+        except ValueError:
+            return
+        while restant > 0:
+            try:
+                morceau = self.rfile.read(min(restant, 65536))
+            except OSError:
+                break
+            if not morceau:
+                break
+            restant -= len(morceau)
+
+    def _refuser(self, code: int, message: str) -> None:
+        self._vider_corps()
+        if self.command == "POST":
+            self._json(code, {"ok": False, "erreur": message})
+        else:
+            self._envoyer(code, "text/plain; charset=utf-8", (message + "\n").encode("utf-8"))
+
+    # --- contrôle d'entrée
+
+    def _garde(self) -> Any:
+        """(chemin, paramètres) d'une requête admise ; None si elle a été refusée (la réponse est déjà partie)."""
+        hote = (self.headers.get("Host") or "").lower()
+        if hote not in self.server.hotes:
+            self._refuser(403, "Adresse non autorisée.")
+            return None
+        origine = self.headers.get("Origin")
+        if origine is not None and origine.lower() not in {f"http://{h}" for h in self.server.hotes}:
+            self._refuser(403, "Origine non autorisée.")
+            return None
+        if not self.path.startswith("/") or self.path.startswith("//"):
+            self._refuser(404, "Page introuvable.")
+            return None
+        adresse = urllib.parse.urlsplit(self.path)
+        parametres = urllib.parse.parse_qs(adresse.query)
+        jeton = (parametres.get("t") or [""])[0]
+        if not hmac.compare_digest(jeton.encode("utf-8"), self.server.jeton.encode("utf-8")):
+            self._refuser(403, "Lien non valide : ouvrez l'adresse affichée dans le terminal.")
+            return None
+        return adresse.path, parametres
+
+    # --- les pages
+
+    def do_GET(self) -> None:
+        garde = self._garde()
+        if garde is None:
+            return
+        chemin = garde[0]
+        try:
+            if chemin == "/":
+                self._page_accueil()
+            elif chemin == "/regles":
+                self._page_regles()
+            elif chemin.startswith("/resultats/"):
+                self._telecharger(urllib.parse.unquote(chemin[len("/resultats/"):]))
+            else:
+                self._refuser(404, "Page introuvable.")
+        except (ErreurEntree, OSError) as erreur:
+            self._refuser(500, f"La page n'a pas pu être préparée : {erreur}")
+
+    def do_POST(self) -> None:
+        garde = self._garde()
+        if garde is None:
+            return
+        chemin, parametres = garde
+        if chemin == "/passer":
+            self._recevoir(parametres)
+        elif chemin == "/fermer":
+            self._vider_corps()
+            self._json(200, {"ok": True})
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
+        else:
+            self._refuser(404, "Page introuvable.")
+
+    def _page_accueil(self) -> None:
+        dossier = self.server.dossier
+        identite, configuration = leadlint.charger_mission(dossier / "mission.json")
+        contenu = rendre_accueil(identite, configuration, _etat_liste(dossier, configuration), _phrase_liste(dossier, configuration), self.server.jeton)
+        self._envoyer(200, "text/html; charset=utf-8", contenu.encode("utf-8"))
+
+    def _page_regles(self) -> None:
+        dossier = self.server.dossier
+        try:
+            ecrire_page(dossier)  # le sceau et la liste d'exclusion disent l'état d'aujourd'hui
+        except ErreurEntree:
+            pass
+        chemin = dossier / "regles.html"
+        if not chemin.is_file():
+            self._refuser(404, "Les règles ne sont pas encore écrites : relancez « leadlint-setup create ».")
+            return
+        self._envoyer(200, "text/html; charset=utf-8", chemin.read_bytes())
+
+    def _telecharger(self, nom: str) -> None:
+        """Un fichier du dossier resultats, et rien d'autre : ni sous-dossier, ni remontée de chemin."""
+        if not nom or nom in {".", ".."} or any(c in nom for c in '/\\:*?"<>|\x00'):
+            self._refuser(404, "Fichier introuvable.")
+            return
+        racine = (self.server.dossier / "resultats").resolve()
+        chemin = (racine / nom).resolve()
+        if chemin.parent != racine or chemin.name != nom or not chemin.is_file():  # le même nom, lettre pour lettre : ni raccourci, ni variante
+            self._refuser(404, "Fichier introuvable.")
+            return
+        type_contenu = TYPES_FICHIERS.get(chemin.suffix.lower(), "application/octet-stream")
+        simple = chemin.name.encode("ascii", "replace").decode("ascii").replace("?", "_")
+        disposition = f"attachment; filename=\"{simple}\"; filename*=UTF-8''{urllib.parse.quote(chemin.name)}"
+        self._envoyer(200, type_contenu, chemin.read_bytes(), {"Content-Disposition": disposition})
+
+    def _recevoir(self, parametres: dict) -> None:
+        try:
+            taille = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            self._refuser(411, "Aucun fichier reçu.")
+            return
+        if taille <= 0:
+            self._refuser(400, "Ce fichier est vide.")
+            return
+        if taille > TAILLE_MAX_DEPOT:
+            self._refuser(413, "Ce fichier dépasse 50 Mo : découpez votre export en plusieurs fichiers.")
+            return
+        try:
+            nom = assainir_nom_depot((parametres.get("nom") or [""])[0])
+        except ErreurEntree as erreur:
+            self._refuser(415, str(erreur))
+            return
+        morceaux: list = []
+        restant = taille
+        self._corps_lu = True
+        while restant > 0:
+            morceau = self.rfile.read(min(restant, 65536))
+            if not morceau:
+                break
+            morceaux.append(morceau)
+            restant -= len(morceau)
+        if restant:
+            self._json(400, {"ok": False, "erreur": "Le fichier est arrivé incomplet : recommencez."})
+            return
+        code, reponse = self.server.traiter(nom, b"".join(morceaux))
+        self._json(code, reponse)
+
+
+class ServeurMoulinette(http.server.ThreadingHTTPServer):
+    """Le serveur de la page de dépôt : 127.0.0.1 seulement, un port libre, un jeton par lancement."""
+
+    daemon_threads = True
+    allow_reuse_address = False  # sous Windows, cela laisserait un autre programme prendre le même port
+
+    def __init__(self, dossier: Path, jeton: str):
+        super().__init__(("127.0.0.1", 0), GestionnaireMoulinette)
+        self.dossier = dossier
+        self.jeton = jeton
+        self.verrou = threading.Lock()  # une passe à la fois : le moteur redirige la sortie du processus
+        port = self.server_address[1]
+        self.hotes = {f"127.0.0.1:{port}", f"localhost:{port}"}
+
+    def adresse(self) -> str:
+        return f"http://127.0.0.1:{self.server_address[1]}/?t={self.jeton}"
+
+    def _lien(self, chemin: Path) -> dict:
+        return {"nom": chemin.name, "url": f"/resultats/{urllib.parse.quote(chemin.name)}?t={self.jeton}"}
+
+    def _donnees(self, passe: dict) -> dict:
+        passage = passe["passage"]
+        colonnes = [str(r["colonne"]) for r in passe["non_appliquees"]]
+        return {
+            "ok": True, "bloque": False, "mission": passe["nom"], "fichier": passe["export"], "total": passage["total"],
+            "conformes": passage["conformes"], "a_verifier": passage["a_verifier"], "rejetes": passage["rejetes"],
+            "causes": [list(ligne) for ligne in _lignes_causes(passage["causes"])],
+            "par_cible": [[cible, n] for cible, n in passage["par_cible"].items()],
+            "regles_non_appliquees": list(dict.fromkeys(colonnes)),
+            "avertissement": _phrase_non_appliquees(colonnes) if colonnes else None,
+            "justes": bool(passe["justes"]),
+            "telechargements": {"nettoye": self._lien(passe["nettoye"]), "controle": self._lien(passe["controle_qa"])},
+        }
+
+    def traiter(self, nom: str, corps: bytes) -> tuple:
+        """Enregistre le fichier déposé, le passe dans les règles du dossier, rend (code HTTP, réponse)."""
+        with self.verrou:
+            depots = self.dossier / "depots"
+            depots.mkdir(parents=True, exist_ok=True)
+            chemin = depots / nom
+            if chemin.resolve().parent != depots.resolve():  # nom assaini : ne doit jamais arriver
+                return 400, {"ok": False, "erreur": "Nom de fichier refusé."}
+            _ecrire_octets(chemin, corps)
+            try:
+                passe = executer_passe(self.dossier, chemin)
+            except ErreurEntree as erreur:
+                self._noter(f"Passage : {nom} · fichier non traité.")
+                return 422, {"ok": False, "erreur": str(erreur)}
+            except Exception:  # un fichier abîmé (Excel tronqué, mauvais format) ne doit pas faire tomber la page
+                self._noter(f"Passage : {nom} · fichier illisible.")
+                return 422, {"ok": False, "erreur": "Je n'arrive pas à lire ce fichier. Est-ce bien un export .csv ou .xlsx ?"}
+            if passe["bloque"]:
+                self._noter(f"Passage : {nom} · bloqué, rien n'est livré.")
+                return 200, {
+                    "ok": False, "bloque": True, "mission": passe["nom"], "fichier": nom,
+                    "message": f"« {nom} » : le contrôle avant lancement bloque, rien n'est livré.", "lignes": passe["lignes"],
+                }
+            bilan = passe["bilan"]
+            self._noter(f"Passage : {nom} · {bilan['total']} lignes · gardées {bilan['conformes']} · à vérifier {bilan['a_verifier']} · rejetées {bilan['rejetes']}.")
+            return 200, self._donnees(passe)
+
+    @staticmethod
+    def _noter(ligne: str) -> None:
+        sys.stdout.write(ligne + "\n")
+        sys.stdout.flush()
+
+
+def servir(dossier: Path, ouvrir: bool = True) -> int:
+    """Ouvre la page de dépôt et tourne jusqu'à Ctrl+C ou jusqu'au bouton « Fermer la moulinette »."""
+    dossier = Path(dossier).resolve()
+    chemin_mission = dossier / "mission.json"
+    if not chemin_mission.is_file():
+        raise ErreurEntree(f"mission.json est introuvable dans {dossier} : lancez d'abord « leadlint-setup create ».")
+    _, configuration = leadlint.charger_mission(chemin_mission)
+    if configuration["mode"] != "revalidation_b2b":
+        raise ErreurEntree("Cette mission est une matrice de personas : il n'y a pas de page de dépôt à ouvrir.")
+    serveur = ServeurMoulinette(dossier, secrets.token_urlsafe(24))
+    adresse = serveur.adresse()
+    ouverte = False
+    if ouvrir and not os.environ.get(VARIABLE_SANS_NAVIGATEUR):
+        try:
+            ouverte = bool(webbrowser.open(adresse))
+        except Exception:  # pragma: no cover - dépend du poste
+            ouverte = False
+    if ouverte:
+        sys.stdout.write(f"Moulinette ouverte dans votre navigateur : {adresse}. Ctrl+C pour fermer.\n")
+    else:
+        sys.stdout.write(f"Ouvrez cette adresse dans votre navigateur : {adresse}. Ctrl+C pour fermer.\n")
+    sys.stdout.flush()
+    try:
+        serveur.serve_forever(poll_interval=0.2)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        serveur.server_close()
+    sys.stdout.write("Moulinette fermée.\n")
+    return 0
 
 
 def lancer_moulinette(dossier: Path, argv: list) -> int:
-    """Le point d'entrée de moulinette.py : `python moulinette.py <export> [--exclusions <fichier>]`."""
+    """Le point d'entrée de moulinette.py : `python moulinette.py <export> [--exclusions <fichier>]`, ou la page de dépôt sans fichier."""
     for flux in (sys.stdout, sys.stderr):
         try:
             flux.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError):  # pragma: no cover
             pass
-    parseur = argparse.ArgumentParser(prog="python moulinette.py", description="Clean an export with the rules of this folder (mission.json). Writes into resultats/.")
-    parseur.add_argument("export", type=Path, help="candidates export .xlsx, .xlsm or .csv")
+    parseur = argparse.ArgumentParser(
+        prog="python moulinette.py",
+        description="Clean an export with the rules of this folder (mission.json). Writes into resultats/. "
+                    "Without a file, opens a page in your browser where you drop the export.",
+    )
+    parseur.add_argument("export", type=Path, nargs="?", help="candidates export .xlsx, .xlsm or .csv (leave empty to open the drop page)")
+    parseur.add_argument("--ouvrir", action="store_true", help="open the drop page in your browser (the default when no file is given)")
     parseur.add_argument("--exclusions", type=Path, help="exclusion list .xlsx or .csv (default: exclusions.* in this folder)")
     args = parseur.parse_args(argv)
     try:
+        if args.ouvrir or args.export is None:
+            if args.export is not None:
+                raise ErreurEntree("Donnez un fichier, ou --ouvrir pour la page de dépôt : pas les deux.")
+            if args.exclusions is not None:
+                raise ErreurEntree("Sur la page de dépôt, la liste d'exclusion est celle du dossier (exclusions.csv).")
+            return servir(Path(dossier))
         return passer(Path(dossier).resolve(), args.export.resolve(), args.exclusions.resolve() if args.exclusions else None)
     except ErreurEntree as erreur:
         sys.stderr.write(f"moulinette : {erreur}\n")
@@ -1018,7 +1616,7 @@ def commande_validate(args) -> int:
     texte = [f"leadlint-setup : règles validées le {_date_fr(resultat['validee_le'])} (signature {resultat['signature_regles']})."]
     if resultat["liste_exclusion"]:
         texte.append(f"Liste d'exclusion : {resultat['liste_exclusion']['volume']} lignes validées ({resultat['liste_exclusion']['fichier']}).")
-    texte += [f"Page à jour : {resultat['page']}", "Vous pouvez passer votre export : python moulinette.py mon-export.csv"]
+    texte += [f"Page à jour : {resultat['page']}", "Vous pouvez passer votre export : double-cliquez sur « Ouvrir la moulinette » puis glissez-le dans la page, ou : python moulinette.py mon-export.csv"]
     _sortie(resultat, args.json, texte)
     return 0
 

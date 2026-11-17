@@ -10,9 +10,9 @@ You give it an export (CSV or Excel) and a mission (a JSON file: your targeting 
 2. In Claude Code: `/plugin marketplace add Gremelinn0/sales-leadlint`, then `/plugin install leadlint@leadlint`.
 3. Say: **« Set up leadlint for me »**. The agent asks about your targets, job titles and sectors.
 4. Read your rules in `ma-moulinette/regles.html` and say yes.
-5. Run `python ma-moulinette/moulinette.py my-export.csv`: your cleaned contacts are in `ma-moulinette/resultats/`.
+5. Double-click **« Ouvrir la moulinette »** in the `ma-moulinette` folder (on a Mac: `ouvrir-la-moulinette.command`), then drop your export on the page that opens: your cleaned contacts download from there. No agent and no terminal needed after step 4. The command line still works: `python ma-moulinette/moulinette.py my-export.csv`.
 
-**En français, en 5 lignes.** Installez Claude Code et Python. Ajoutez le paquet avec les deux commandes de la ligne 2. Dites « installe ma moulinette » : l'agent vous demande vos cibles, vos postes et vos secteurs. Relisez vos règles dans `regles.html`, puis dites oui. Lancez `python ma-moulinette/moulinette.py mon-export.csv`. Tout reste sur votre ordinateur, sans compte.
+**En français, en 5 lignes.** Installez Claude Code et Python. Ajoutez le paquet avec les deux commandes de la ligne 2. Dites « installe ma moulinette » : l'agent vous demande vos cibles, vos postes et vos secteurs. Relisez vos règles dans `regles.html`, puis dites oui. Double-cliquez sur « Ouvrir la moulinette » dans le dossier `ma-moulinette`, puis glissez votre export dans la page qui s'ouvre : vous récupérez votre fichier nettoyé, sans agent ni terminal. La ligne de commande reste possible : `python ma-moulinette/moulinette.py mon-export.csv`. Tout reste sur votre ordinateur, sans compte.
 
 ## Try it in your browser first
 
@@ -91,15 +91,15 @@ Writing the JSON by hand is not the point. Build and validate the mission in the
 
 ## Your own cleaning script, from a few questions
 
-`leadlint-setup` is the other way in. Your agent (the `leadlint-setup` skill) asks a few questions about your targets, job titles and sectors, then writes **on your machine** a folder with your own script (`moulinette.py`) and a page (`regles.html`) that shows your rules in plain language. You read, you validate, then `python moulinette.py export.csv` gives you the cleaned contacts with their target. No account, no network.
+`leadlint-setup` is the other way in. Your agent (the `leadlint-setup` skill) asks a few questions about your targets, job titles and sectors, then writes **on your machine** a folder with your own script (`moulinette.py`) and a page (`regles.html`) that shows your rules in plain language. You read, you validate, then you double-click **« Ouvrir la moulinette »** and drop your export on the page that opens: it gives you the cleaned contacts with their target, ready to download. The page is a small local server (standard library only, listening on `127.0.0.1`, with a random token for each launch): your files never leave your computer, and you need neither an agent nor a terminal once the rules are validated. `python moulinette.py export.csv` does the same from the command line. No account, no network.
 
 ```bash
 leadlint-setup create reponses.json -o ma-moulinette --exclusions clients.csv
 leadlint-setup validate ma-moulinette        # only after the person has read regles.html and said yes
-python ma-moulinette/moulinette.py export.csv
+python ma-moulinette/moulinette.py export.csv   # or double-click "Ouvrir la moulinette" and drop the file on the page
 ```
 
-Ask your agent: *« Set up leadlint for me »*. A complete fictional example (answers, export, exclusion list) is in [`skills/leadlint-setup/exemples/`](skills/leadlint-setup/exemples/). The folder carries its own copy of the engine; the engine itself is unchanged.
+Ask your agent: *« Set up leadlint for me »*. A complete fictional example (answers, export, exclusion list) is in [`skills/leadlint-setup/exemples/`](skills/leadlint-setup/exemples/). The folder carries its own copy of the engine and two launchers for a double-click (`Ouvrir la moulinette.bat`, `ouvrir-la-moulinette.command`); the engine itself is unchanged.
 
 ## Outputs are in French
 
