@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """leadlint-setup: turn a few answers into your own cleaning script and a page that shows your rules.
 
-Three commands:
+This tool cleans exports of CONTACT searches (Sales Navigator and the like): the job title is the heart of it; the other
+filters are boxes you tick on the moulinette page (they are remembered in reglages.json). Three commands:
 
-  create    reads the answers (reponses.json) and writes a folder: mission.json, matrice.json,
+  create    reads the answers (reponses.json) and writes a folder: mission.json, matrice.json, reglages.json,
             leadlint.py, moulinette.py (your script), two double-click launchers, regles.html (your rules in plain French).
   validate  records the HUMAN validation of the rules (date and signature). Run it only when the
             person has explicitly agreed to their rules, after reading regles.html.
@@ -41,6 +42,7 @@ import os
 import re
 import secrets
 import sys
+import tempfile
 import threading
 import urllib.parse
 import webbrowser
@@ -61,7 +63,7 @@ ErreurEntree = leadlint.ErreurEntree
 VERSION = leadlint.VERSION
 DEPOT = "https://github.com/Gremelinn0/sales-leadlint"
 EXTENSIONS_TABLEAU = {".csv", ".xlsx", ".xlsm", ".txt", ".tsv"}
-CHAMPS_FINAUX = ("nomComplet", "entreprise", "poste", "linkedinProfil", "emailProfessionnel", "mobile")
+CHAMPS_FINAUX = ("nomComplet", "entreprise", "poste", "linkedinProfil", "emailProfessionnel", "mobile")  # colonnes du fichier -conformes.xlsx du moteur
 CHAMPS_OBLIGATOIRES_DEFAUT = ["nomComplet", "entreprise", "poste"]
 TAILLE_SANS_LIMITE = 1_000_000_000
 PHRASE_SUITE = "Ouvrez regles.html, relisez vos règles, puis validez."
@@ -80,9 +82,10 @@ LIBELLES_CHAMPS = {
 }
 
 CLES_REPONSES = {
-    "nom", "pour", "pays", "cibles", "postes_exclus", "secteurs", "taille", "email_pro_obligatoire",
-    "mobile_obligatoire", "liste_exclusion", "champs_obligatoires", "colonnes",
+    "nom", "pour", "pays", "cibles", "postes_exclus", "secteurs", "taille", "liste_exclusion", "champs_obligatoires", "colonnes",
 }
+CLES_RETIREES = ("email_pro_obligatoire", "mobile_obligatoire")
+PHRASE_RETIREES = "l'enrichissement vient après le nettoyage, leadlint-setup ne contrôle pas les emails ni les mobiles."
 CLES_SECTEURS = {"mots_cles", "mots_exclus", "codes_naf", "codes_naf_exclus"}
 
 
@@ -143,6 +146,9 @@ def verifier_reponses(brut: Any) -> dict:
     """Contrôle les réponses et les rend normalisées. Une erreur dit en une phrase ce qui ne va pas."""
     if not isinstance(brut, dict):
         raise ErreurEntree("Les réponses doivent être un objet JSON (voir skills/leadlint-setup/exemples/reponses-exemple.json).")
+    for cle in CLES_RETIREES:
+        if cle in brut:
+            raise ErreurEntree(f"« {cle} » n'existe plus : {PHRASE_RETIREES} Retirez-la des réponses.")
     inconnues = sorted(cle for cle in brut if cle not in CLES_REPONSES and not str(cle).startswith("_"))
     if inconnues:
         raise ErreurEntree(f"Clé inconnue dans les réponses : « {inconnues[0]} ». Clés connues : {', '.join(sorted(CLES_REPONSES))}.")
@@ -198,8 +204,6 @@ def verifier_reponses(brut: Any) -> dict:
         "postes_exclus": _liste_de_mots(brut.get("postes_exclus"), "postes_exclus"),
         "secteurs": {cle: _liste_de_mots(secteurs_bruts.get(cle), f"secteurs.{cle}") for cle in ("mots_cles", "mots_exclus", "codes_naf", "codes_naf_exclus")},
         "taille": _taille(brut.get("taille")),
-        "email_pro_obligatoire": _booleen(brut.get("email_pro_obligatoire"), "email_pro_obligatoire"),
-        "mobile_obligatoire": _booleen(brut.get("mobile_obligatoire"), "mobile_obligatoire"),
         "liste_exclusion": _booleen(brut.get("liste_exclusion"), "liste_exclusion"),
         "champs_obligatoires": obligatoires,
         "colonnes": {champ: entete.strip() for champ, entete in colonnes.items()},
@@ -257,10 +261,6 @@ def construire(reponses: dict, empreinte_cible: str) -> tuple:
             regles.append(_regle(critere, operateur, secteurs[cle], "ignorer"))
     if reponses["taille"]:
         regles.append(_regle("employes_visibles", "entre", dict(reponses["taille"]), "ignorer"))
-    if reponses["email_pro_obligatoire"]:
-        regles.append(_regle("email_pro", "email_professionnel", True))
-    if reponses["mobile_obligatoire"]:
-        regles.append(_regle("mobile_fr", "mobile_francais", True))
     if reponses["liste_exclusion"]:
         regles.append(_regle("blacklist", "pas_blackliste", True))
     regles.append(_regle("doublon", "unique", True))
@@ -296,6 +296,171 @@ def _controles_hors_export(configuration: dict, volume_liste: int, signature_lis
         correspondance.setdefault(champ, leadlint.ENTETES_CANDIDATS[champ][0])
     simulee["mappingCandidats"] = correspondance
     return leadlint.controler_prevol(simulee, 1, volume_liste, signature_liste)
+
+
+# --------------------------------------------------------------------------- les filtres : des cases à cocher, retenues
+#
+# mission.json porte TOUTES les règles, validées une fois. Les cases (reglages.json) ne font qu'éteindre des règles au moment
+# d'un passage : le script écrit une copie de la mission où ces règles sont désactivées, la signe pour ce passage seulement, et
+# la donne au moteur. Valider une mission, c'est valider toutes ses règles et leurs valeurs ; cocher ou décocher n'y change rien.
+# Si une valeur de mission.json est retouchée à la main, la mission n'est plus la validée et rien n'est livré, comme avant.
+
+FICHIER_REGLAGES = "reglages.json"
+FILTRES = (
+    # (id, titre, groupe, coché par défaut, toujours actif)
+    ("poste", "Intitulé de poste dans mes cibles", "contact", True, True),
+    ("postes_exclus", "Intitulés à écarter", "contact", True, False),
+    ("doublons", "Doublons", "contact", True, False),
+    ("liste_exclusion", "Liste d'exclusion", "contact", False, False),
+    ("champs_obligatoires", "Lignes incomplètes", "contact", False, False),
+    ("pays", "Pays", "entreprise", False, False),
+    ("activite", "Activité", "entreprise", False, False),
+    ("naf", "Codes NAF", "entreprise", False, False),
+    ("taille", "Taille", "entreprise", False, False),
+)
+REGLES_DU_FILTRE = {
+    "poste": ["r-poste-contient_un"],
+    "postes_exclus": ["r-poste-ne_contient_aucun"],
+    "doublons": ["r-doublon-unique"],
+    "liste_exclusion": ["r-blacklist-pas_blackliste"],
+    "pays": ["r-pays-est_dans"],
+    "activite": ["r-activite-contient_un", "r-activite-ne_contient_aucun"],
+    "naf": ["r-code_naf-est_dans", "r-code_naf-n_est_pas_dans"],
+    "taille": ["r-employes_visibles-entre"],
+}
+FILTRE_DE_REGLE = {regle: filtre for filtre, regles in REGLES_DU_FILTRE.items() for regle in regles}
+TITRES_GROUPES = {"contact": "Contacts", "entreprise": "Entreprise (un autre traitement, facultatif)"}
+
+
+def _detail_filtre(identifiant: str, regles: dict, configuration: dict, cibles: Any) -> str:
+    """Une ligne qui dit ce que fait le filtre, avec les valeurs de la mission."""
+    def valeur(regle: str) -> Any:
+        return regles[regle].get("valeur") if regle in regles else None
+
+    if identifiant == "poste":
+        return f"Cibles : {', '.join(cibles)}." if cibles else ""
+    if identifiant == "postes_exclus":
+        return f"Écarte un poste qui contient : {_liste_texte(valeur('r-poste-ne_contient_aucun'))}."
+    if identifiant == "doublons":
+        return "Un même contact n'est gardé qu'une fois."
+    if identifiant == "liste_exclusion":
+        return "Écarte les entreprises de votre liste d'exclusion."
+    if identifiant == "champs_obligatoires":
+        noms = [LIBELLES_CHAMPS.get(c, c) for c in configuration["champsObligatoires"]]
+        return f"Écarte une ligne s'il manque : {', '.join(noms)}."
+    if identifiant == "pays":
+        return f"Entreprise dans : {_liste_texte(valeur('r-pays-est_dans'))}."
+    if identifiant == "activite":
+        morceaux = []
+        if valeur("r-activite-contient_un"):
+            morceaux.append(f"activité avec : {_liste_texte(valeur('r-activite-contient_un'))}")
+        if valeur("r-activite-ne_contient_aucun"):
+            morceaux.append(f"sans : {_liste_texte(valeur('r-activite-ne_contient_aucun'))}")
+        return "Entreprise, " + " ; ".join(morceaux) + "."
+    if identifiant == "naf":
+        morceaux = []
+        if valeur("r-code_naf-est_dans"):
+            morceaux.append(f"codes voulus : {_liste_texte(valeur('r-code_naf-est_dans'))}")
+        if valeur("r-code_naf-n_est_pas_dans"):
+            morceaux.append(f"codes écartés : {_liste_texte(valeur('r-code_naf-n_est_pas_dans'))}")
+        return "Entreprise, " + " ; ".join(morceaux) + "."
+    if identifiant == "taille":
+        taille = valeur("r-employes_visibles-entre")
+        return _phrase_taille(taille) if isinstance(taille, dict) else ""
+    return ""
+
+
+def filtres_de_la_mission(configuration: dict, cibles: Any = ()) -> list:
+    """Les filtres que cette mission porte, dans l'ordre de la page : seulement ceux dont la personne a défini la règle."""
+    regles = {r.get("id"): r for r in configuration["regles"] if isinstance(r, dict)}
+    sortie: list = []
+    for identifiant, titre, groupe, defaut, verrou in FILTRES:
+        if identifiant == "champs_obligatoires":
+            existe = bool(configuration["champsObligatoires"])
+        else:
+            existe = any(regle in regles for regle in REGLES_DU_FILTRE[identifiant])
+        if existe:
+            sortie.append({
+                "id": identifiant, "titre": titre, "groupe": groupe, "defaut": defaut, "verrou": verrou,
+                "detail": _detail_filtre(identifiant, regles, configuration, cibles),
+            })
+    return sortie
+
+
+def lire_choix(dossier: Path) -> dict:
+    """Les cases telles que la personne les a laissées (reglages.json) : seulement des vrai/faux, le reste est ignoré."""
+    brut = _lire_json(dossier / FICHIER_REGLAGES)
+    filtres = brut.get("filtres") if isinstance(brut, dict) else None
+    if not isinstance(filtres, dict):
+        return {}
+    return {cle: valeur for cle, valeur in filtres.items() if isinstance(valeur, bool)}
+
+
+def etat_filtres(dossier: Path, configuration: dict, cibles: Any = ()) -> list:
+    """Les filtres de la mission avec leur case : `actif` (coché) et `propose` (la case se montre)."""
+    choix = lire_choix(dossier)
+    liste_presente = _trouver_exclusions(dossier) is not None
+    filtres = filtres_de_la_mission(configuration, cibles)
+    for filtre in filtres:
+        filtre["actif"] = True if filtre["verrou"] else choix.get(filtre["id"], filtre["defaut"])
+        # la case de la liste d'exclusion se montre si une liste est posée dans le dossier, ou si elle est cochée (pour pouvoir la décocher)
+        filtre["propose"] = filtre["id"] != "liste_exclusion" or liste_presente or filtre["actif"]
+    return filtres
+
+
+def ecrire_choix(dossier: Path, filtres: list) -> None:
+    _ecrire_json(dossier / FICHIER_REGLAGES, {"filtres": {f["id"]: bool(f["actif"]) for f in filtres}})
+
+
+def changer_reglage(dossier: Path, identifiant: str, actif: bool) -> list:
+    """Coche ou décoche un filtre et l'enregistre aussitôt. Rend l'état de tous les filtres."""
+    chemin_mission = dossier / "mission.json"
+    if not chemin_mission.is_file():
+        raise ErreurEntree(f"mission.json est introuvable dans {dossier} : lancez d'abord « leadlint-setup create ».")
+    _, configuration = leadlint.charger_mission(chemin_mission)
+    filtres = etat_filtres(dossier, configuration)
+    cible = next((f for f in filtres if f["id"] == identifiant), None)
+    if cible is None:
+        raise ErreurEntree("Ce filtre n'existe pas dans vos règles.")
+    if cible["verrou"] and not actif:
+        raise ErreurEntree("Ce filtre est toujours actif : c'est le cœur de la moulinette.")
+    if identifiant == "liste_exclusion" and actif and _trouver_exclusions(dossier) is None:
+        raise ErreurEntree("Posez d'abord votre liste dans ce dossier, sous le nom exclusions.csv.")
+    cible["actif"] = bool(actif)
+    ecrire_choix(dossier, filtres)
+    return etat_filtres(dossier, configuration)
+
+
+def phrase_filtres(filtres: list) -> str:
+    actifs = [f["titre"] for f in filtres if f["actif"]]
+    eteints = [f["titre"] for f in filtres if not f["actif"]]
+    texte = "Filtres actifs : " + ", ".join(actifs)
+    return texte + (" · désactivés : " + ", ".join(eteints) if eteints else "")
+
+
+def _mission_du_passage(brut: dict, filtres: list, signer: bool, chemin: Path) -> dict:
+    """Écrit la mission de CE passage (règles décochées éteintes) et rend sa configuration relue par le moteur.
+
+    Elle n'est signée (par le script du dossier) que si mission.json est la mission validée : sinon elle garde la signature
+    d'origine et le moteur bloque, comme il le ferait sur mission.json.
+    """
+    actifs = {f["id"]: f["actif"] for f in filtres}
+    copie = copy.deepcopy(brut)
+    cible = copie["configuration"] if isinstance(copie.get("configuration"), dict) else copie
+    eteintes = {regle for filtre, regles in REGLES_DU_FILTRE.items() if actifs.get(filtre, True) is False for regle in regles}
+    for regle in cible.get("regles") or []:
+        if isinstance(regle, dict) and regle.get("id") in eteintes:
+            regle["active"] = False
+    if actifs.get("champs_obligatoires", True) is False:
+        cible["champsObligatoires"] = ["poste"]  # la colonne du poste doit toujours exister : sans elle, tout serait rejeté en silence
+    if actifs.get("liste_exclusion", True) is False:
+        cible["blacklist"] = {**(cible.get("blacklist") if isinstance(cible.get("blacklist"), dict) else {}), "obligatoire": False}
+    _ecrire_json(chemin, copie)
+    if signer:
+        _, relue = leadlint.charger_mission(chemin)
+        cible["origine"] = {**cible["origine"], "empreinteRegles": leadlint.empreinte_regles(relue)}
+        _ecrire_json(chemin, copie)
+    return leadlint.charger_mission(chemin)[1]
 
 
 # --------------------------------------------------------------------------- fichiers
@@ -396,7 +561,8 @@ GABARIT_MOULINETTE = '''#!/usr/bin/env python3
 # Ce script lance le moteur qui est dans ce dossier (leadlint.py, leadlint_setup.py) avec vos règles
 # (mission.json, matrice.json). Il ne livre rien tant que vous n'avez pas relu et validé vos règles
 # (regles.html). Pour changer une règle, ne modifiez pas mission.json : demandez à votre agent
-# « change mes règles LeadLint », puis relisez et revalidez.
+# « change mes règles LeadLint », puis relisez et revalidez. Vos filtres (cases à cocher dans la page)
+# se retiennent dans reglages.json : cocher ou décocher ne demande aucune nouvelle validation.
 import sys
 from pathlib import Path
 
@@ -439,12 +605,18 @@ def creer(chemin_reponses: Path, dossier: Path, exclusions: Any = None, force: b
     if configuration["mode"] != "revalidation_b2b" or not controle["valide"] or leadlint.cible_validee(configuration):
         raise ErreurEntree("Les règles écrites ne se relisent pas comme prévu : mission.json n'est pas utilisable. Ce n'est pas votre faute, signalez-le.")
     _ecrire_json(dossier / "matrice.json", matrice)
+    # Les cases : celles que la personne avait déjà posées sont gardées (pour les filtres qui existent encore), sinon les valeurs par défaut.
+    anciennes = lire_choix(dossier)
+    filtres = filtres_de_la_mission(configuration, [c["nom"] for c in reponses["cibles"]])
+    for filtre in filtres:
+        filtre["actif"] = True if filtre["verrou"] else anciennes.get(filtre["id"], filtre["defaut"])
+    ecrire_choix(dossier, filtres)
     _copier(Path(leadlint.__file__), dossier / "leadlint.py")
     _copier(Path(__file__), dossier / "leadlint_setup.py")
     _ecrire_texte(dossier / "moulinette.py", texte_moulinette(reponses, dt.date.today().isoformat()))
     lanceurs = _ecrire_lanceurs(dossier)
     _copier(chemin_reponses, dossier / "reponses.json")
-    fichiers = ["mission.json", "matrice.json", "leadlint.py", "leadlint_setup.py", "moulinette.py", *lanceurs, "regles.html", "reponses.json"]
+    fichiers = ["mission.json", "matrice.json", FICHIER_REGLAGES, "leadlint.py", "leadlint_setup.py", "moulinette.py", *lanceurs, "regles.html", "reponses.json"]
     if exclusions is not None:
         fichiers.append(_poser_liste_exclusion(dossier, exclusions).name)
     ecrire_page(dossier)
@@ -453,6 +625,7 @@ def creer(chemin_reponses: Path, dossier: Path, exclusions: Any = None, force: b
     return {
         "outil": "leadlint-setup", "version": VERSION, "commande": "create", "dossier": str(dossier.resolve()),
         "mission": reponses["nom"], "fichiers": fichiers, "validee": False,
+        "filtres": [{"id": f["id"], "titre": f["titre"], "actif": f["actif"]} for f in filtres],
         "liste_exclusion_requise": requise, "liste_exclusion_fournie": fournie,
         "page": str((dossier / "regles.html").resolve()), "suite": PHRASE_SUITE,
     }
@@ -550,6 +723,7 @@ p{margin:0}
 .regle-titre{font-weight:700}
 .regle-phrase{color:var(--texte);margin-top:.15rem}
 .etat{display:inline-block;margin-left:.4rem;padding:0 .5rem;border-radius:999px;background:var(--alerte-fond);color:var(--alerte);font-size:.75rem;font-weight:600}
+.etat-actif{background:var(--ok-fond);color:var(--ok)}
 details{margin-top:.4rem;color:var(--doux);font-size:.88rem}
 summary{cursor:pointer;color:var(--accent);font-weight:600}
 dl{margin:.5rem 0 0;display:grid;grid-template-columns:auto 1fr;gap:.2rem .8rem}
@@ -581,10 +755,10 @@ footer a{color:var(--accent)}
 """
 
 FAMILLES = (
-    ("entreprise", "Entreprise", "Aucune règle sur l'entreprise."),
     ("contact", "Contact", "Aucune règle sur le contact."),
     ("exclusion", "Exclusions", "Aucune liste d'exclusion."),
     ("qualite", "Qualité", "Aucune règle de qualité."),
+    ("entreprise", "Entreprise (facultatif)", "Aucune règle sur l'entreprise."),
 )
 
 HORS_REGLE = {"bloquant": "rejeté", "verification": "à vérifier", "informatif": "sans effet sur le verdict"}
@@ -676,17 +850,32 @@ def _e(texte: Any) -> str:
     return html.escape(str(texte))
 
 
-def _bloc_regle(titre: str, phrase: str, detail: list, inactive: bool = False, visible: str = "") -> str:
+def _bloc_regle(titre: str, phrase: str, detail: list, actif: Any = None, visible: str = "") -> str:
+    """`actif` : True (pastille « actif »), False (« désactivé »), None (pas de pastille)."""
     lignes = "".join(f"<dt>{_e(cle)}</dt><dd>{_e(valeur)}</dd>" for cle, valeur in detail)
-    etat = '<span class="etat">désactivée</span>' if inactive else ""
+    etat = "" if actif is None else ('<span class="etat etat-actif">actif</span>' if actif else '<span class="etat">désactivé</span>')
     en_plus = f'<p class="regle-phrase doux">{_e(visible)}</p>' if visible else ""
     return (f'<div class="regle"><p class="regle-titre">{_e(titre)}{etat}</p><p class="regle-phrase">{_e(phrase)}</p>{en_plus}'
             f"<details><summary>Détail</summary><dl>{lignes}</dl></details></div>")
 
 
-def _etat_liste(dossier: Path, configuration: dict) -> str:
-    """« modifiee » si la liste d'exclusion posée dans le dossier n'est plus celle qui a été validée."""
+def _lire_cibles(dossier: Path) -> list:
+    """Les cibles de matrice.json : [{categorie, motsCles, priorite}]."""
+    matrice = _lire_json(dossier / "matrice.json")
+    axes = matrice.get("axes") if isinstance(matrice, dict) else None
+    regles = axes[0].get("regles") if isinstance(axes, list) and axes and isinstance(axes[0], dict) else None
+    return [r for r in regles if isinstance(r, dict) and isinstance(r.get("motsCles"), list)] if isinstance(regles, list) else []
+
+
+def _filtres_du_dossier(dossier: Path, configuration: dict) -> list:
+    return etat_filtres(dossier, configuration, [str(c.get("categorie")) for c in _lire_cibles(dossier)])
+
+
+def _etat_liste(dossier: Path, configuration: dict, filtres: Any = None) -> str:
+    """« modifiee » si la liste d'exclusion posée dans le dossier n'est plus celle qui a été validée (seulement si le filtre est coché)."""
     reference = configuration["blacklist"]
+    if filtres is not None and not any(f["id"] == "liste_exclusion" and f["actif"] for f in filtres):
+        return "inconnu"
     if not _liste_exclusion_requise(configuration) or not leadlint.vrai(reference.get("empreinte")):
         return "inconnu"
     fichier = _trouver_exclusions(dossier)
@@ -762,6 +951,8 @@ def _section_passage(passage: Any, configuration: dict) -> str:
     bloc_causes = f'<div class="carte"><h3>Pourquoi des lignes sont écartées</h3><ul class="compte">{li_causes or "<li><span>Aucune ligne écartée.</span></li>"}</ul></div>'
     bloc_cibles = f'<div class="carte"><h3>Gardés, par cible</h3><ul class="compte">{li_cibles or "<li><span>Aucun contact gardé.</span></li>"}</ul></div>'
     encarts = ""
+    filtres_passage = [f for f in passage.get("filtres") or [] if isinstance(f, dict) and isinstance(f.get("titre"), str) and isinstance(f.get("actif"), bool)]
+    ligne_filtres = f'<p class="total">{_e(phrase_filtres(filtres_passage))}</p>' if filtres_passage else ""
     non_appliquees = passage.get("regles_non_appliquees")
     if isinstance(non_appliquees, list) and non_appliquees:
         colonnes = [str(r.get("colonne") or r.get("libelle")) for r in non_appliquees if isinstance(r, dict)]
@@ -770,32 +961,42 @@ def _section_passage(passage: Any, configuration: dict) -> str:
     if signature and signature != leadlint.empreinte_regles(configuration):
         encarts += '<div class="encart doux">Ce passage date d\'avant votre dernière modification des règles.</div>'
     return (f'<section><h2>Dernier passage</h2><div class="chiffres">{chiffres}</div>'
-            f'<p class="total">sur {entier("total")} lignes · {origine}</p>'
+            f'<p class="total">sur {entier("total")} lignes · {origine}</p>{ligne_filtres}'
             f'<div class="deux">{bloc_causes}{bloc_cibles}</div>{encarts}</section>')
 
 
-def rendre_page(identite: dict, configuration: dict, cibles: list, passage: Any = None, etat_liste: str = "inconnu") -> str:
+def rendre_page(identite: dict, configuration: dict, cibles: list, passage: Any = None, etat_liste: str = "inconnu", filtres: Any = None) -> str:
     nom = identite.get("mission") or "Ma prospection"
     pour = identite.get("client")
     etat, texte_sceau = _sceau(configuration, etat_liste)
+    actifs = {f["id"]: f["actif"] for f in (filtres or [])}
+
+    def pastille(filtre: Any, regle: Any = None) -> Any:
+        """True (actif), False (désactivé) ou None : la case du filtre, et jamais « actif » pour une règle éteinte dans la mission."""
+        if regle is not None and not leadlint.vrai(regle.get("active")):
+            return False
+        return actifs.get(filtre)
+
     familles: dict = {cle: [] for cle, _, _ in FAMILLES}
     for regle in configuration["regles"]:
         if not isinstance(regle, dict):
             continue
         famille, titre, phrase = _decrire(regle)
+        filtre = FILTRE_DE_REGLE.get(regle.get("id"))
         if regle.get("operateur") == "pas_blackliste":
             reference = configuration["blacklist"]
             volume = reference.get("volumeAttendu")
             contenu = f"{volume} lignes validées" if isinstance(volume, int) and not isinstance(volume, bool) else "pas encore chargée"
             nom_liste = str(reference.get("nom") or "Liste d'exclusion")
             familles["exclusion"].append(_bloc_regle(titre, phrase, [("Liste", nom_liste), ("Contenu", contenu)] + _detail(regle)[1:],
-                                                     not leadlint.vrai(regle.get("active")), f"{nom_liste} : {contenu}."))
+                                                     pastille(filtre, regle), f"{nom_liste} : {contenu}."))
             continue
-        familles[famille].append(_bloc_regle(titre, phrase, _detail(regle), not leadlint.vrai(regle.get("active"))))
+        familles[famille].append(_bloc_regle(titre, phrase, _detail(regle), pastille(filtre, regle)))
     obligatoires = configuration.get("champsObligatoires") or []
     if obligatoires:
         noms = [LIBELLES_CHAMPS.get(c, c) for c in obligatoires]
-        familles["qualite"].append(_bloc_regle("Champs obligatoires", f"Une ligne est écartée s'il manque : {', '.join(noms)}.", [("Champs", ", ".join(noms)), ("Hors règle", "rejeté")]))
+        familles["qualite"].append(_bloc_regle("Lignes incomplètes", f"Une ligne est écartée s'il manque : {', '.join(noms)}.", [("Champs", ", ".join(noms)), ("Hors règle", "rejeté")],
+                                               pastille("champs_obligatoires")))
     cartes_familles = "".join(
         f'<article class="carte"><h3>{_e(titre)}</h3>{"".join(familles[cle]) or f"<p class=vide>{_e(vide)}</p>"}</article>'
         for cle, titre, vide in FAMILLES
@@ -806,7 +1007,7 @@ def rendre_page(identite: dict, configuration: dict, cibles: list, passage: Any 
         for rang, cible in enumerate(cibles, start=1)
     ) or '<p class="vide">Aucune cible dans matrice.json.</p>'
     note_cibles = '<p class="total">Si un poste correspond à plusieurs cibles, la première de la liste l\'emporte.</p>' if len(cibles) > 1 else ""
-    note_liste = "<li>La liste d'exclusion est lue dans <code>exclusions.csv</code> posé à côté du script, ou avec <code>--exclusions mon-fichier.csv</code>.</li>" if _liste_exclusion_requise(configuration) else ""
+    note_liste = "<li>La liste d'exclusion est lue dans <code>exclusions.csv</code> posé à côté du script, ou avec <code>--exclusions mon-fichier.csv</code>. Elle ne sert que si son filtre est coché.</li>" if _liste_exclusion_requise(configuration) else ""
     return (
         '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="color-scheme" content="light dark">\n'
@@ -819,7 +1020,8 @@ def rendre_page(identite: dict, configuration: dict, cibles: list, passage: Any 
         f"{_section_passage(passage, configuration)}\n"
         '<section><h2>Comment s\'en servir</h2><div class="carte"><ol class="etapes">'
         "<li>Double-cliquez sur <code>Ouvrir la moulinette</code> (sur Mac : <code>ouvrir-la-moulinette.command</code>), puis glissez votre export dans la page qui s'ouvre.</li>"
-        "<li>Vous préférez la ligne de commande ? Passez votre export avec <code>python moulinette.py mon-export.csv</code>.</li>"
+        "<li>Choisissez vos filtres dans cette même page : l'intitulé de poste est toujours actif, les autres se cochent ou se décochent, et votre choix est retenu pour les passages suivants.</li>"
+        "<li>Vous préférez la ligne de commande ? Passez votre export avec <code>python moulinette.py mon-export.csv</code> : elle applique les mêmes filtres.</li>"
         "<li>Vos contacts nettoyés se téléchargent depuis la page, et sont aussi dans le dossier <code>resultats</code> : le fichier se terminant par <code>-nettoye.xlsx</code> contient les contacts gardés, avec leur cible.</li>"
         f"<li>Pour changer une règle, demandez à votre agent : « change mes règles LeadLint ».</li>{note_liste}"
         "</ol></div></section>\n"
@@ -833,11 +1035,9 @@ def ecrire_page(dossier: Path) -> Path:
     identite, configuration = leadlint.charger_mission(dossier / "mission.json")
     if configuration["mode"] != "revalidation_b2b":
         raise ErreurEntree("Cette mission est une matrice de personas : il n'y a pas de règles à montrer.")
-    matrice = _lire_json(dossier / "matrice.json")
-    axes = matrice.get("axes") if isinstance(matrice, dict) else None
-    regles = axes[0].get("regles") if isinstance(axes, list) and axes and isinstance(axes[0], dict) else None
-    cibles = [r for r in regles if isinstance(r, dict) and isinstance(r.get("motsCles"), list)] if isinstance(regles, list) else []
-    contenu = rendre_page(identite, configuration, cibles, _lire_json(dossier / "dernier-passage.json"), _etat_liste(dossier, configuration))
+    cibles = _lire_cibles(dossier)
+    filtres = _filtres_du_dossier(dossier, configuration)
+    contenu = rendre_page(identite, configuration, cibles, _lire_json(dossier / "dernier-passage.json"), _etat_liste(dossier, configuration, filtres), filtres)
     chemin = dossier / "regles.html"
     _ecrire_texte(chemin, contenu)
     return chemin
@@ -885,7 +1085,8 @@ def _expliquer_blocage(dossier: Path, configuration: dict, export: Path, exclusi
             ]
     if "blacklist" in bloques:
         if exclusions is None:
-            lignes += ["Il manque la liste d'exclusion.", "  Posez-la dans le dossier sous le nom exclusions.csv, ou ajoutez --exclusions <fichier>."]
+            lignes += ["Il manque la liste d'exclusion.", "  Posez-la dans le dossier sous le nom exclusions.csv, ou ajoutez --exclusions <fichier>.",
+                       "  Ou décochez « Liste d'exclusion » dans la page de la moulinette."]
         else:
             lignes += [f"Je ne reconnais pas les colonnes de la liste d'exclusion {Path(exclusions).name} (« Entreprise », « Site », « LinkedIn entreprise » ou « SIREN » attendues)."]
     elif "empreinte" in bloques and leadlint.vrai(configuration["blacklist"].get("empreinte")):
@@ -895,7 +1096,8 @@ def _expliquer_blocage(dossier: Path, configuration: dict, export: Path, exclusi
         except (ErreurEntree, OSError):
             trouve = None
         precision = f" ({attendu} lignes validées, {trouve} aujourd'hui)" if attendu is not None and trouve is not None else ""
-        lignes += [f"La liste d'exclusion n'est plus celle que vous avez validée{precision}.", "  Si le changement est voulu, revalidez avec « leadlint-setup validate »."]
+        lignes += [f"La liste d'exclusion n'est plus celle que vous avez validée{precision}.", "  Si le changement est voulu, revalidez avec « leadlint-setup validate ».",
+                   "  Ou décochez « Liste d'exclusion » dans la page de la moulinette."]
     if "configuration" in bloques:
         entetes = leadlint.lire_tableau(export)[0]
         correspondance = leadlint.completer_mapping(configuration["mappingCandidats"], entetes, leadlint.ENTETES_CANDIDATS)
@@ -918,55 +1120,100 @@ def _causes_texte(causes: dict) -> str:
     return " · ".join(f"{_sans_cadratin(cause)} {n}" for cause, n in causes.items()) or "aucune"
 
 
+def _entetes_uniques(noms: list) -> list:
+    """Des entêtes que le classeur accepte : non vides, sans doublon (Excel ne distingue pas majuscules et minuscules)."""
+    vus: set = set()
+    sortie: list = []
+    for rang, brut in enumerate(noms, start=1):
+        base = str(brut).strip() or f"Colonne {rang}"
+        nom, suite = base, 2
+        while nom.casefold() in vus:
+            nom, suite = f"{base} ({suite})", suite + 1
+        vus.add(nom.casefold())
+        sortie.append(nom)
+    return sortie
+
+
+CARACTERES_ILLISIBLES = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _cellule_nettoyee(valeur: Any) -> Any:
+    """La valeur d'origine, intacte. Seul un texte qui commence par « = » est protégé : le classeur le prendrait pour une formule."""
+    if isinstance(valeur, str):
+        valeur = CARACTERES_ILLISIBLES.sub("", valeur)
+        return "'" + valeur if valeur.startswith("=") else valeur
+    return valeur
+
+
 def executer_passe(dossier: Path, export: Path, exclusions: Any = None) -> dict:
     """Une passe : contrôle avant lancement, vérification de chaque ligne, fichier nettoyé avec sa cible, bilan.
 
-    Rend les données (rien n'est écrit sur la sortie) : la ligne de commande et la page locale les présentent chacune à leur façon.
+    Les filtres sont ceux de reglages.json (les cases). Rend les données (rien n'est écrit sur la sortie) : la ligne de commande
+    et la page locale les présentent chacune à leur façon.
     """
     dossier = dossier.resolve()
     chemin_mission = dossier / "mission.json"
     if not chemin_mission.is_file():
         raise ErreurEntree(f"mission.json est introuvable dans {dossier} : lancez d'abord « leadlint-setup create ».")
     identite, configuration = leadlint.charger_mission(chemin_mission)
+    if configuration["mode"] != "revalidation_b2b":
+        raise ErreurEntree("Cette mission est une matrice de personas : il n'y a pas de règles à passer sur un export.")
+    brut = _lire_json(chemin_mission)
     nom = " / ".join(v for v in (identite.get("client"), identite.get("mission")) if v) or "ma mission"
-    if exclusions is None:
-        exclusions = _trouver_exclusions(dossier)
+    filtres = _filtres_du_dossier(dossier, configuration)
+    # Une liste d'exclusion décochée n'est ni cherchée ni lue : absente ou modifiée, elle ne bloque rien.
+    if any(f["id"] == "liste_exclusion" and f["actif"] for f in filtres):
+        if exclusions is None:
+            exclusions = _trouver_exclusions(dossier)
+    else:
+        exclusions = None
     resultats = dossier / "resultats"
-    commande = ["check", str(export), "--mission", str(chemin_mission), "-o", str(resultats), "--json", "--lignes"]
-    if exclusions is not None:
-        commande += ["--exclusions", str(exclusions)]
-    code, bilan = _lancer_moteur(commande)
+    # La mission complète doit être la validée ; seulement alors la copie de ce passage (cases appliquées) est signée.
+    with tempfile.TemporaryDirectory(prefix="leadlint-passage-") as temporaire:
+        chemin_passage = Path(temporaire) / "mission.json"
+        configuration_passage = _mission_du_passage(brut, filtres, leadlint.cible_validee(configuration), chemin_passage)
+        commande = ["check", str(export), "--mission", str(chemin_passage), "-o", str(resultats), "--json", "--lignes"]
+        if exclusions is not None:
+            commande += ["--exclusions", str(exclusions)]
+        code, bilan = _lancer_moteur(commande)
     if code == 2 or not bilan.get("livre"):
-        return {"bloque": True, "nom": nom, "export": export.name, "lignes": _expliquer_blocage(dossier, configuration, export, exclusions, bilan)}
+        return {"bloque": True, "nom": nom, "export": export.name, "filtres": filtres,
+                "lignes": _expliquer_blocage(dossier, configuration_passage, export, exclusions, bilan)}
     justes = all(bilan["invariants"].values())
     matrice = _lire_json(dossier / "matrice.json")
     try:
         axe = matrice["axes"][0]
     except (TypeError, KeyError, IndexError) as erreur:
         raise ErreurEntree("matrice.json est illisible : relancez « leadlint-setup create ».") from erreur
-    entetes_c, lignes_c = leadlint.lire_tableau(Path(bilan["fichiers"]["conformes"]))
-    if len(lignes_c) != bilan["conformes"]:
+    # Le fichier nettoyé garde TOUTES les colonnes de l'export, pour les lignes gardées, puis la cible.
+    entetes_export, lignes_export = leadlint.lire_tableau(export)
+    verdicts = bilan["lignes"]
+    gardees = [v["numeroLigne"] for v in verdicts if v["statut"] == "Conforme"]
+    if len(gardees) != bilan["conformes"] or len(verdicts) != len(lignes_export):
         justes = False
-    colonnes = configuration["colonnesFinales"]
-    position = next((i for i, c in enumerate(colonnes) if c.get("champ") == "poste"), None)
+    correspondance = leadlint.completer_mapping(configuration_passage["mappingCandidats"], entetes_export, leadlint.ENTETES_CANDIDATS)
+    colonne_poste = correspondance.get("poste")
+    position = max((i for i, entete in enumerate(entetes_export) if entete == colonne_poste), default=None) if colonne_poste else None
     cibles = list(dict.fromkeys(r["categorie"] for r in axe.get("regles", []))) + [leadlint.NON_CLASSE]
     comptes: Counter = Counter()
     lignes_nettoyees: list = []
-    for ligne in lignes_c:
-        cible = leadlint.classer(ligne[position] if position is not None and position < len(ligne) else "", axe)
+    largeur = len(entetes_export)
+    for numero in gardees:
+        source = list(lignes_export[numero - 2]) if 0 <= numero - 2 < len(lignes_export) else []
+        source = (source + [""] * largeur)[:largeur]
+        cible = leadlint.classer(source[position] if position is not None else "", axe)
         comptes[cible] += 1
-        lignes_nettoyees.append(list(ligne) + [cible])
+        lignes_nettoyees.append([_cellule_nettoyee(v) for v in source] + [cible])
     nettoye = resultats / f"{leadlint._base(export)}-nettoye.xlsx"
     classeur = leadlint._openpyxl()[0].Workbook()
     classeur.properties.creator = "leadlint"
     classeur.remove(classeur.active)
-    leadlint._feuille(classeur, "Contacts nettoyés", "ContactsNettoyes", list(entetes_c) + ["Cible"], lignes_nettoyees,
-                      [34 if re.search(r"linkedin|email", e, re.I) else 22 for e in list(entetes_c) + ["Cible"]])
+    entetes_finaux = _entetes_uniques(list(entetes_export) + ["Cible"])
+    leadlint._feuille(classeur, "Contacts nettoyés", "ContactsNettoyes", entetes_finaux, lignes_nettoyees,
+                      [34 if re.search(r"linkedin|email|mail", e, re.I) else 22 for e in entetes_finaux])
     classeur.save(nettoye)
-    entetes_export = leadlint.lire_tableau(export)[0]
-    correspondance = leadlint.completer_mapping(configuration["mappingCandidats"], entetes_export, leadlint.ENTETES_CANDIDATS)
     non_appliquees = []
-    for regle in configuration["regles"]:
+    for regle in configuration_passage["regles"]:
         champ = leadlint.DEFINITIONS.get(regle.get("critereId"), (None,))[0]
         if leadlint.vrai(regle.get("active")) and champ and not correspondance.get(champ):
             non_appliquees.append({"regle": regle.get("id"), "champ": champ, "colonne": LIBELLES_CHAMPS.get(champ, champ)})
@@ -978,12 +1225,13 @@ def executer_passe(dossier: Path, export: Path, exclusions: Any = None) -> dict:
         "moteur": f"leadlint {leadlint.VERSION}", "total": bilan["total"], "conformes": bilan["conformes"],
         "a_verifier": bilan["a_verifier"], "rejetes": bilan["rejetes"], "causes": bilan["causes"],
         "par_cible": {cible: comptes[cible] for cible in cibles if comptes[cible]},
+        "filtres": [{"id": f["id"], "titre": f["titre"], "actif": f["actif"]} for f in filtres],
         "regles_non_appliquees": non_appliquees, "signature_regles": leadlint.empreinte_regles(configuration), "fichiers": fichiers,
     }
     _ecrire_json(dossier / "dernier-passage.json", passage)
     page = ecrire_page(dossier)
     return {
-        "bloque": False, "nom": nom, "export": export.name, "bilan": bilan, "justes": justes, "passage": passage,
+        "bloque": False, "nom": nom, "export": export.name, "bilan": bilan, "justes": justes, "passage": passage, "filtres": filtres,
         "non_appliquees": non_appliquees, "nettoye": nettoye, "controle_qa": dossier / fichiers["controle_qa"], "page": page,
     }
 
@@ -1002,6 +1250,7 @@ def passer(dossier: Path, export: Path, exclusions: Any = None) -> int:
         f"Rejetées, par cause : {_causes_texte(bilan['causes']['Rejeté'])}",
         f"Gardées, par cible : {_causes_texte(passage['par_cible'])}",
         f"Contrôles du bilan : {'justes' if passe['justes'] else 'FAUX'}",
+        phrase_filtres(passe["filtres"]),
     ]
     if bilan["causes"]["À vérifier"]:
         sortie.insert(3, f"À vérifier, par cause : {_causes_texte(bilan['causes']['À vérifier'])}")
@@ -1102,14 +1351,19 @@ def assainir_nom_depot(brut: Any) -> str:
     return racine + extension
 
 
-def _phrase_liste(dossier: Path, configuration: dict) -> tuple:
+def _phrase_liste(dossier: Path, configuration: dict, filtres: Any = None) -> tuple:
     """(classe, phrase) : l'état de la liste d'exclusion, tel que la personne le lit sur la page de dépôt."""
     if not _liste_exclusion_requise(configuration):
         return "doux", "Liste d'exclusion : aucune."
     fichier = _trouver_exclusions(dossier)
+    cochee = filtres is None or any(f["id"] == "liste_exclusion" and f["actif"] for f in filtres)
+    if not cochee:
+        if fichier is None:
+            return "doux", "Liste d'exclusion : décochée, et aucune liste dans ce dossier (posez exclusions.csv pour pouvoir l'utiliser)."
+        return "doux", f"Liste d'exclusion : décochée ({fichier.name} n'est pas utilisée)."
     if fichier is None:
         return "alerte", "Liste d'exclusion : introuvable. Posez-la dans ce dossier sous le nom exclusions.csv."
-    etat = _etat_liste(dossier, configuration)
+    etat = _etat_liste(dossier, configuration, filtres)
     volume = configuration["blacklist"].get("volumeAttendu")
     if etat == "ok":
         return "ok", f"Liste d'exclusion : {fichier.name}, {volume} lignes validées."
@@ -1138,6 +1392,11 @@ CSS_DEPOT = """
 .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:1.2rem}
 .bouton{display:inline-block;padding:.75rem 1.2rem;border-radius:10px;background:var(--accent);color:var(--bouton-texte);font-weight:700;text-decoration:none}
 .bouton.secondaire{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+.filtre{display:flex;gap:.7rem;align-items:flex-start;padding:.55rem 0;border-top:1px solid var(--trait);cursor:pointer}
+.filtre:first-of-type{border-top:0}
+.filtre input{margin-top:.3rem;width:1.1rem;height:1.1rem;flex:none;accent-color:var(--accent)}
+.filtre-texte b{display:block}
+.filtre-texte small{display:block;color:var(--doux);font-size:.85rem;overflow-wrap:anywhere}
 .pied{display:flex;flex-wrap:wrap;gap:1.2rem;align-items:center;margin-top:2.4rem}
 .pied a,button.lien{color:var(--accent);font:inherit;font-weight:600}
 button.lien{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
@@ -1201,6 +1460,7 @@ SCRIPT_DEPOT = r"""
     });
     sortie.appendChild(chiffres);
     sortie.appendChild(el("p", "total", "sur " + d.total + " lignes · " + d.fichier));
+    if (d.filtres_texte) { sortie.appendChild(el("p", "total", d.filtres_texte)); }
     var deux = el("div", "deux");
     deux.appendChild(bloc("Pourquoi des lignes sont écartées", d.causes, "Aucune ligne écartée."));
     deux.appendChild(bloc("Gardés, par cible", d.par_cible, "Aucun contact gardé."));
@@ -1212,6 +1472,42 @@ SCRIPT_DEPOT = r"""
     actions.appendChild(bouton(d.telechargements.controle, "secondaire", "Le contrôle ligne par ligne (.xlsx)"));
     sortie.appendChild(actions);
   }
+  function afficher(d) {
+    if (d.ok) { montrer(d); }
+    else if (d.bloque) { dire("ko", d.message, d.lignes); }
+    else { dire("ko", d.erreur || "Ce fichier n'a pas pu être traité.", []); }
+  }
+  var cases = document.querySelectorAll("input[data-filtre]");
+  var etat = document.getElementById("etat-filtres");
+  function bloquerCases(oui) { Array.prototype.forEach.call(cases, function (c) { if (!c.hasAttribute("data-verrou")) { c.disabled = oui; } }); }
+  function cocher(filtres) {
+    filtres.forEach(function (f) {
+      Array.prototype.forEach.call(cases, function (c) { if (c.getAttribute("data-filtre") === f.id) { c.checked = f.actif; } });
+    });
+  }
+  function changer(c) {
+    if (occupe) { c.checked = !c.checked; return; }
+    var voulu = c.checked;
+    occupe = true;
+    zone.classList.add("occupe");
+    bloquerCases(true);
+    etat.textContent = "Je mets à jour…";
+    fetch("/reglage?t=" + encodeURIComponent(jeton) + "&id=" + encodeURIComponent(c.getAttribute("data-filtre")) + "&actif=" + (voulu ? "1" : "0"), { method: "POST" })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, erreur: "La réponse de la moulinette est illisible." }; }); })
+      .then(function (d) {
+        if (d.ok) {
+          cocher(d.filtres);
+          etat.textContent = "Enregistré : ce filtre s'applique à tous les prochains passages.";
+          if (d.passage) { afficher(d.passage); }
+        } else {
+          c.checked = !voulu;
+          etat.textContent = d.erreur || "Ce choix n'a pas pu être enregistré.";
+        }
+      })
+      .catch(function () { c.checked = !voulu; etat.textContent = "La moulinette ne répond plus. Elle a peut-être été fermée."; })
+      .then(function () { occupe = false; zone.classList.remove("occupe"); bloquerCases(false); });
+  }
+  Array.prototype.forEach.call(cases, function (c) { c.addEventListener("change", function () { changer(c); }); });
   function envoyer(fichier, plusieurs) {
     if (occupe) { return; }
     if (!PERMIS.test(fichier.name)) { dire("ko", "Ce fichier n'est pas un export que je sais lire.", ["Déposez un fichier .csv, .xlsx ou .xlsm."]); return; }
@@ -1222,11 +1518,7 @@ SCRIPT_DEPOT = r"""
     dire("doux", "Je traite « " + fichier.name + " »…", plusieurs ? ["Un seul fichier à la fois : les autres sont ignorés."] : []);
     fetch("/passer?t=" + encodeURIComponent(jeton) + "&nom=" + encodeURIComponent(fichier.name), { method: "POST", body: fichier })
       .then(function (r) { return r.json().catch(function () { return { ok: false, erreur: "La réponse de la moulinette est illisible." }; }); })
-      .then(function (d) {
-        if (d.ok) { montrer(d); }
-        else if (d.bloque) { dire("ko", d.message, d.lignes); }
-        else { dire("ko", d.erreur || "Ce fichier n'a pas pu être traité.", []); }
-      })
+      .then(afficher)
       .catch(function () { dire("ko", "La moulinette ne répond plus.", ["Elle a peut-être été fermée : double-cliquez de nouveau sur « Ouvrir la moulinette »."]); })
       .then(function () { occupe = false; zone.classList.remove("occupe"); choix.value = ""; });
   }
@@ -1258,7 +1550,29 @@ SCRIPT_DEPOT = r"""
 """
 
 
-def rendre_accueil(identite: dict, configuration: dict, etat_liste: str, phrase_liste: tuple, jeton: str) -> str:
+def _html_filtres(filtres: list) -> str:
+    """Le bloc « Ce que je filtre » : une case par filtre de la mission ; celle de l'intitulé est cochée et verrouillée."""
+    groupes = []
+    for groupe in ("contact", "entreprise"):
+        lignes = []
+        for filtre in filtres:
+            if filtre["groupe"] != groupe or not filtre["propose"]:
+                continue
+            attributs = (" checked" if filtre["actif"] else "") + (" disabled data-verrou" if filtre["verrou"] else "")
+            detail = (("Toujours actif. " if filtre["verrou"] else "") + filtre["detail"]).strip()
+            lignes.append(
+                f'<label class="filtre"><input type="checkbox" data-filtre="{_e(filtre["id"])}"{attributs}>'
+                f'<span class="filtre-texte"><b>{_e(filtre["titre"])}</b>' + (f"<small>{_e(detail)}</small>" if detail else "") + "</span></label>"
+            )
+        if lignes:
+            groupes.append(f'<div class="carte"><h3>{_e(TITRES_GROUPES[groupe])}</h3>{"".join(lignes)}</div>')
+    if not groupes:
+        return ""
+    return (f'<section id="filtres"><h2>Ce que je filtre</h2><div class="deux">{"".join(groupes)}</div>'
+            '<p class="liste liste-doux" id="etat-filtres" aria-live="polite">Cochez ce que vous voulez : votre choix est retenu pour les prochains passages.</p></section>\n')
+
+
+def rendre_accueil(identite: dict, configuration: dict, etat_liste: str, phrase_liste: tuple, jeton: str, filtres: Any = None) -> str:
     """La page « Déposez votre export »."""
     nom = identite.get("mission") or "Ma prospection"
     pour = identite.get("client")
@@ -1280,7 +1594,8 @@ def rendre_accueil(identite: dict, configuration: dict, etat_liste: str, phrase_
         f'<p class="liste liste-{classe_liste}">{_e(texte_liste)}</p>\n'
         '<noscript><div class="encart ko">Cette page a besoin de JavaScript pour recevoir votre fichier. '
         "Sinon, utilisez la ligne de commande : python moulinette.py mon-export.csv</div></noscript></section>\n"
-        '<section id="resultat" aria-live="polite"></section>\n'
+        + _html_filtres(filtres or [])
+        + '<section id="resultat" aria-live="polite"></section>\n'
         f'<div class="pied"><a href="{_e(adresse_regles)}" target="_blank" rel="noopener">Voir mes règles</a>'
         '<button type="button" class="lien" id="fermer">Fermer la moulinette</button></div>\n'
         f'<footer><a href="{DEPOT}" rel="noopener">leadlint</a> · gratuit, local, vos fichiers ne quittent pas votre ordinateur · Zero Gravity AI</footer>\n'
@@ -1393,6 +1708,8 @@ class GestionnaireMoulinette(http.server.BaseHTTPRequestHandler):
         chemin, parametres = garde
         if chemin == "/passer":
             self._recevoir(parametres)
+        elif chemin == "/reglage":
+            self._changer_reglage(parametres)
         elif chemin == "/fermer":
             self._vider_corps()
             self._json(200, {"ok": True})
@@ -1400,10 +1717,22 @@ class GestionnaireMoulinette(http.server.BaseHTTPRequestHandler):
         else:
             self._refuser(404, "Page introuvable.")
 
+    def _changer_reglage(self, parametres: dict) -> None:
+        self._vider_corps()
+        identifiant = (parametres.get("id") or [""])[0]
+        actif = (parametres.get("actif") or [""])[0]
+        if actif not in ("0", "1"):
+            self._json(400, {"ok": False, "erreur": "Case non reconnue."})
+            return
+        code, reponse = self.server.changer(identifiant, actif == "1")
+        self._json(code, reponse)
+
     def _page_accueil(self) -> None:
         dossier = self.server.dossier
         identite, configuration = leadlint.charger_mission(dossier / "mission.json")
-        contenu = rendre_accueil(identite, configuration, _etat_liste(dossier, configuration), _phrase_liste(dossier, configuration), self.server.jeton)
+        filtres = _filtres_du_dossier(dossier, configuration)
+        contenu = rendre_accueil(identite, configuration, _etat_liste(dossier, configuration, filtres), _phrase_liste(dossier, configuration, filtres),
+                                 self.server.jeton, filtres)
         self._envoyer(200, "text/html; charset=utf-8", contenu.encode("utf-8"))
 
     def _page_regles(self) -> None:
@@ -1477,6 +1806,7 @@ class ServeurMoulinette(http.server.ThreadingHTTPServer):
         self.dossier = dossier
         self.jeton = jeton
         self.verrou = threading.Lock()  # une passe à la fois : le moteur redirige la sortie du processus
+        self.dernier_depot = None  # le dernier export déposé pendant cette ouverture : un changement de case le passe de nouveau
         port = self.server_address[1]
         self.hotes = {f"127.0.0.1:{port}", f"localhost:{port}"}
 
@@ -1497,8 +1827,31 @@ class ServeurMoulinette(http.server.ThreadingHTTPServer):
             "regles_non_appliquees": list(dict.fromkeys(colonnes)),
             "avertissement": _phrase_non_appliquees(colonnes) if colonnes else None,
             "justes": bool(passe["justes"]),
+            "filtres": [{"id": f["id"], "titre": f["titre"], "actif": f["actif"]} for f in passe["filtres"]],
+            "filtres_texte": phrase_filtres(passe["filtres"]),
             "telechargements": {"nettoye": self._lien(passe["nettoye"]), "controle": self._lien(passe["controle_qa"])},
         }
+
+    def _passer(self, nom: str, chemin: Path) -> tuple:
+        """Passe le fichier déjà gardé dans depots/ avec les filtres d'aujourd'hui. Rend (code HTTP, réponse)."""
+        try:
+            passe = executer_passe(self.dossier, chemin)
+        except ErreurEntree as erreur:
+            self._noter(f"Passage : {nom} · fichier non traité.")
+            return 422, {"ok": False, "erreur": str(erreur)}
+        except Exception:  # un fichier abîmé (Excel tronqué, mauvais format) ne doit pas faire tomber la page
+            self._noter(f"Passage : {nom} · fichier illisible.")
+            return 422, {"ok": False, "erreur": "Je n'arrive pas à lire ce fichier. Est-ce bien un export .csv ou .xlsx ?"}
+        self.dernier_depot = nom
+        if passe["bloque"]:
+            self._noter(f"Passage : {nom} · bloqué, rien n'est livré.")
+            return 200, {
+                "ok": False, "bloque": True, "mission": passe["nom"], "fichier": nom,
+                "message": f"« {nom} » : le contrôle avant lancement bloque, rien n'est livré.", "lignes": passe["lignes"],
+            }
+        bilan = passe["bilan"]
+        self._noter(f"Passage : {nom} · {bilan['total']} lignes · gardées {bilan['conformes']} · à vérifier {bilan['a_verifier']} · rejetées {bilan['rejetes']}.")
+        return 200, self._donnees(passe)
 
     def traiter(self, nom: str, corps: bytes) -> tuple:
         """Enregistre le fichier déposé, le passe dans les règles du dossier, rend (code HTTP, réponse)."""
@@ -1509,23 +1862,21 @@ class ServeurMoulinette(http.server.ThreadingHTTPServer):
             if chemin.resolve().parent != depots.resolve():  # nom assaini : ne doit jamais arriver
                 return 400, {"ok": False, "erreur": "Nom de fichier refusé."}
             _ecrire_octets(chemin, corps)
+            return self._passer(nom, chemin)
+
+    def changer(self, identifiant: str, actif: bool) -> tuple:
+        """Coche ou décoche un filtre (enregistré aussitôt dans reglages.json) ; si un export a été déposé, le passe de nouveau."""
+        with self.verrou:
             try:
-                passe = executer_passe(self.dossier, chemin)
+                filtres = changer_reglage(self.dossier, identifiant, actif)
             except ErreurEntree as erreur:
-                self._noter(f"Passage : {nom} · fichier non traité.")
-                return 422, {"ok": False, "erreur": str(erreur)}
-            except Exception:  # un fichier abîmé (Excel tronqué, mauvais format) ne doit pas faire tomber la page
-                self._noter(f"Passage : {nom} · fichier illisible.")
-                return 422, {"ok": False, "erreur": "Je n'arrive pas à lire ce fichier. Est-ce bien un export .csv ou .xlsx ?"}
-            if passe["bloque"]:
-                self._noter(f"Passage : {nom} · bloqué, rien n'est livré.")
-                return 200, {
-                    "ok": False, "bloque": True, "mission": passe["nom"], "fichier": nom,
-                    "message": f"« {nom} » : le contrôle avant lancement bloque, rien n'est livré.", "lignes": passe["lignes"],
-                }
-            bilan = passe["bilan"]
-            self._noter(f"Passage : {nom} · {bilan['total']} lignes · gardées {bilan['conformes']} · à vérifier {bilan['a_verifier']} · rejetées {bilan['rejetes']}.")
-            return 200, self._donnees(passe)
+                return 400, {"ok": False, "erreur": str(erreur)}
+            titre = next((f["titre"] for f in filtres if f["id"] == identifiant), identifiant)
+            self._noter(f"Filtre : {titre} {'coché' if actif else 'décoché'}.")
+            passage = None
+            if self.dernier_depot is not None:
+                passage = self._passer(self.dernier_depot, self.dossier / "depots" / self.dernier_depot)[1]
+            return 200, {"ok": True, "filtres": [{"id": f["id"], "titre": f["titre"], "actif": f["actif"]} for f in filtres], "passage": passage}
 
     @staticmethod
     def _noter(ligne: str) -> None:

@@ -41,23 +41,48 @@ import leadlint_setup as s  # noqa: E402
 TIRET_CADRATIN = chr(0x2014)
 
 # Compté à la main sur export-brut-exemple.csv : ligne -> (verdict, cause ou cible).
-LIGNES_ATTENDUES = {
+# TOUT COCHÉ : tous les filtres de l'exemple sont actifs (intitulés à écarter, doublons, liste d'exclusion, lignes incomplètes, pays, activité, taille).
+LIGNES_TOUT = {
     1: ("Conforme", "Dirigeants"), 2: ("Conforme", "Direction commerciale"), 3: ("Conforme", "Dirigeants"),
     4: ("Conforme", "Direction commerciale"), 5: ("Conforme", "Dirigeants"), 6: ("Conforme", "Dirigeants"),
     7: ("Conforme", "Direction commerciale"), 8: ("Conforme", "Dirigeants"), 9: ("Conforme", "Direction commerciale"),
     10: ("Conforme", "Dirigeants"), 11: ("Rejeté", "Mauvais intitulé de poste"), 12: ("Rejeté", "Mauvais intitulé de poste"),
     13: ("Rejeté", "Mauvais intitulé de poste"), 14: ("Rejeté", "Mauvais intitulé de poste"), 15: ("Rejeté", "Doublon"),
     16: ("Rejeté", "Doublon"), 17: ("Rejeté", "Liste d'exclusion"), 18: ("Rejeté", "Liste d'exclusion"),
-    19: ("Rejeté", "Mauvais intitulé de poste"), 20: ("Rejeté", "Mauvais intitulé de poste"), 21: ("Rejeté", "Email professionnel"),
+    19: ("Rejeté", "Mauvais intitulé de poste"), 20: ("Rejeté", "Mauvais intitulé de poste"), 21: ("Conforme", "Dirigeants"),
     22: ("Rejeté", "Pays"), 23: ("Rejeté", "Employés visibles LinkedIn"), 24: ("Rejeté", "Employés visibles LinkedIn"),
-    25: ("Rejeté", "Mauvaise entreprise"), 26: ("Rejeté", "Mauvaise entreprise"), 27: ("Rejeté", "Email professionnel"),
+    25: ("Rejeté", "Mauvaise entreprise"), 26: ("Rejeté", "Mauvaise entreprise"), 27: ("Conforme", "Dirigeants"),
     28: ("Rejeté", "Champ obligatoire manquant : entreprise"), 29: ("Rejeté", "Mauvais intitulé de poste"), 30: ("Conforme", "Direction commerciale"),
 }
-CAUSES_ATTENDUES = {
-    "Mauvais intitulé de poste": 7, "Doublon": 2, "Liste d'exclusion": 2, "Email professionnel": 2,
-    "Employés visibles LinkedIn": 2, "Mauvaise entreprise": 2, "Pays": 1, "Champ obligatoire manquant " + TIRET_CADRATIN + " entreprise": 1,
+CAUSES_TOUT = {
+    "Mauvais intitulé de poste": 7, "Doublon": 2, "Liste d'exclusion": 2, "Employés visibles LinkedIn": 2,
+    "Mauvaise entreprise": 2, "Pays": 1, "Champ obligatoire manquant " + TIRET_CADRATIN + " entreprise": 1,
 }
-PAR_CIBLE_ATTENDU = {"Dirigeants": 6, "Direction commerciale": 5}
+PAR_CIBLE_TOUT = {"Dirigeants": 8, "Direction commerciale": 5}
+CHIFFRES_TOUT = (30, 13, 0, 17)  # lignes, gardées, à vérifier, rejetées
+
+# CASES PAR DÉFAUT : l'intitulé de poste, les intitulés à écarter et les doublons ; tout le reste décoché.
+# Les lignes 17 et 18 (liste d'exclusion), 21 (Gmail), 22 (Belgique), 23 et 24 (taille), 25 et 26 (activité), 27 (sans email) et
+# 28 (sans entreprise) passent : aucun de ces filtres n'est coché.
+LIGNES_DEFAUT = {
+    1: ("Conforme", "Dirigeants"), 2: ("Conforme", "Direction commerciale"), 3: ("Conforme", "Dirigeants"),
+    4: ("Conforme", "Direction commerciale"), 5: ("Conforme", "Dirigeants"), 6: ("Conforme", "Dirigeants"),
+    7: ("Conforme", "Direction commerciale"), 8: ("Conforme", "Dirigeants"), 9: ("Conforme", "Direction commerciale"),
+    10: ("Conforme", "Dirigeants"), 11: ("Rejeté", "Mauvais intitulé de poste"), 12: ("Rejeté", "Mauvais intitulé de poste"),
+    13: ("Rejeté", "Mauvais intitulé de poste"), 14: ("Rejeté", "Mauvais intitulé de poste"), 15: ("Rejeté", "Doublon"),
+    16: ("Rejeté", "Doublon"), 17: ("Conforme", "Dirigeants"), 18: ("Conforme", "Direction commerciale"),
+    19: ("Rejeté", "Mauvais intitulé de poste"), 20: ("Rejeté", "Mauvais intitulé de poste"), 21: ("Conforme", "Dirigeants"),
+    22: ("Conforme", "Dirigeants"), 23: ("Conforme", "Dirigeants"), 24: ("Conforme", "Dirigeants"),
+    25: ("Conforme", "Dirigeants"), 26: ("Conforme", "Dirigeants"), 27: ("Conforme", "Dirigeants"),
+    28: ("Conforme", "Dirigeants"), 29: ("Rejeté", "Mauvais intitulé de poste"), 30: ("Conforme", "Direction commerciale"),
+}
+CAUSES_DEFAUT = {"Mauvais intitulé de poste": 7, "Doublon": 2}
+PAR_CIBLE_DEFAUT = {"Dirigeants": 15, "Direction commerciale": 6}
+CHIFFRES_DEFAUT = (30, 21, 0, 9)
+CASES_DEFAUT = {"poste": True, "postes_exclus": True, "doublons": True, "liste_exclusion": False, "champs_obligatoires": False, "pays": False, "activite": False, "taille": False}
+CASES_TOUT = {cle: True for cle in CASES_DEFAUT}
+PHRASE_FILTRES_DEFAUT = ("Filtres actifs : Intitulé de poste dans mes cibles, Intitulés à écarter, Doublons"
+                         " · désactivés : Liste d'exclusion, Lignes incomplètes, Pays, Activité, Taille")
 SCEAU_ATTENTE = "Pas encore validées : rien n'est livré tant que vous n'avez pas relu"
 MOTS_INTERDITS = re.compile(r"blacklist|empreinte|mapping|pr[ée]vol", re.IGNORECASE)
 
@@ -99,7 +124,7 @@ class Banc(unittest.TestCase):
         self.addCleanup(shutil.rmtree, dossier, True)
         return dossier
 
-    def monter(self, reponses: dict = None, exclusions: bool = True, valider: bool = True) -> Path:
+    def monter(self, reponses: dict = None, exclusions: bool = True, valider: bool = True, coches: dict = None) -> Path:
         """Un dossier de travail créé (et, par défaut, validé) à partir des réponses."""
         travail = self.nouveau_dossier()
         fichier = travail / "reponses.json"
@@ -114,7 +139,26 @@ class Banc(unittest.TestCase):
         if valider:
             code, sortie, erreurs = setup("validate", str(dossier), "--date", "2026-11-17")
             self.assertEqual(code, 0, sortie + erreurs)
+        if coches:
+            self.cocher(dossier, **coches)
         return dossier
+
+    def cocher(self, dossier: Path, **cases: bool) -> None:
+        """Pose des cases dans reglages.json (comme la page le fait) ; les autres gardent leur valeur."""
+        _, configuration = m.charger_mission(dossier / "mission.json")
+        filtres = s.etat_filtres(dossier, configuration)
+        for filtre in filtres:
+            if filtre["id"] in cases:
+                filtre["actif"] = cases[filtre["id"]]
+        s.ecrire_choix(dossier, filtres)
+
+    def tout_cocher(self, dossier: Path) -> None:
+        """Toutes les cases que la mission porte (y compris celles que l'exemple n'a pas toujours)."""
+        _, configuration = m.charger_mission(dossier / "mission.json")
+        self.cocher(dossier, **{f["id"]: True for f in s.filtres_de_la_mission(configuration)})
+
+    def reglages(self, dossier: Path) -> dict:
+        return json.loads((dossier / "reglages.json").read_text(encoding="utf-8"))["filtres"]
 
     def mission(self, dossier: Path) -> dict:
         return json.loads((dossier / "mission.json").read_text(encoding="utf-8"))
@@ -169,7 +213,7 @@ class Creation(Banc):
         regles = {r["id"]: r for r in self.mission(dossier)["configuration"]["regles"]}
         self.assertEqual(list(regles), [
             "r-pays-est_dans", "r-poste-contient_un", "r-poste-ne_contient_aucun", "r-activite-contient_un", "r-activite-ne_contient_aucun",
-            "r-employes_visibles-entre", "r-email_pro-email_professionnel", "r-blacklist-pas_blackliste", "r-doublon-unique",
+            "r-employes_visibles-entre", "r-blacklist-pas_blackliste", "r-doublon-unique",
         ])
         voulu = regles["r-poste-contient_un"]
         self.assertEqual((voulu["importance"], voulu["siAbsent"], voulu.get("motEntier")), ("bloquant", "rejeter", True))
@@ -179,7 +223,8 @@ class Creation(Banc):
         self.assertEqual((ecarte["siAbsent"], ecarte.get("motEntier")), ("ignorer", True))
         self.assertEqual(regles["r-pays-est_dans"]["siAbsent"], "ignorer")
         self.assertEqual(regles["r-employes_visibles-entre"]["valeur"], {"min": 11, "max": 200})
-        self.assertEqual(regles["r-email_pro-email_professionnel"]["siAbsent"], "rejeter")
+        self.assertNotIn("r-email_pro-email_professionnel", regles, "leadlint-setup ne contrôle ni les emails ni les mobiles")
+        self.assertTrue(all(r["active"] is True for r in regles.values()), "mission.json porte toutes les règles, actives : les cases ne la touchent pas")
         self.assertNotIn("motEntier", regles["r-pays-est_dans"])
         configuration = self.mission(dossier)["configuration"]
         self.assertEqual(configuration["blacklist"], {"obligatoire": True, "nom": "Liste d'exclusion", "typeSource": "fichier"})
@@ -209,8 +254,9 @@ class Creation(Banc):
         processus = moulinette(dossier, str(self.EXPORT))
         self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
         passage = self.passage(dossier)
-        self.assertEqual((passage["total"], passage["conformes"], passage["rejetes"]), (30, 13, 17), "les deux lignes de la liste d'exclusion passent sans elle")
+        self.assertEqual((passage["total"], passage["conformes"], passage["rejetes"]), (30, 21, 9), "les deux lignes de la liste d'exclusion passent sans elle")
         self.assertNotIn("Liste d'exclusion", passage["causes"]["Rejeté"])
+        self.assertNotIn("liste_exclusion", self.reglages(dossier), "pas de règle, pas de case")
         self.assertIn("Aucune liste d'exclusion.", texte_visible(self.page(dossier)))
 
     def test_refuse_d_ecraser_une_mission_validee_sans_force(self):
@@ -285,6 +331,9 @@ class ReponsesInvalides(Banc):
             (lambda r: r.update(liste_exclusion="oui"), "true ou false"),
             (lambda r: r.update(pays=[3]), "que du texte"),
             (lambda r: r.update(secteurs={"autre": []}), "ne connaît que"),
+            (lambda r: r.update(email_pro_obligatoire=True), "l'enrichissement vient après le nettoyage, leadlint-setup ne contrôle pas les emails ni les mobiles"),
+            (lambda r: r.update(mobile_obligatoire=True), "l'enrichissement vient après le nettoyage, leadlint-setup ne contrôle pas les emails ni les mobiles"),
+            (lambda r: r.update(email_pro_obligatoire=False), "n'existe plus"),
         ]
         for modifier, attendu in cas:
             with self.subTest(attendu=attendu):
@@ -367,24 +416,43 @@ class Moulinette(Banc):
         processus = moulinette(dossier, str(self.EXPORT))
         self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
         sortie = processus.stdout
-        self.assertIn("Lignes 30 · gardées 11 · à vérifier 0 · rejetées 19", sortie)
+        self.assertIn("Lignes 30 · gardées 21 · à vérifier 0 · rejetées 9", sortie)
         self.assertIn("Contrôles du bilan : justes", sortie)
+        self.assertIn(PHRASE_FILTRES_DEFAUT, sortie)
         self.assertNotIn(TIRET_CADRATIN, sortie)
         passage = self.passage(dossier)
-        self.assertEqual((passage["total"], passage["conformes"], passage["a_verifier"], passage["rejetes"]), (30, 11, 0, 19))
+        self.assertEqual((passage["total"], passage["conformes"], passage["a_verifier"], passage["rejetes"]), CHIFFRES_DEFAUT)
+        self.assertEqual({f["id"]: f["actif"] for f in passage["filtres"]}, CASES_DEFAUT, "le bilan dit quels filtres étaient actifs")
         self.assertEqual(passage["total"], passage["conformes"] + passage["a_verifier"] + passage["rejetes"], "premier invariant")
         self.assertEqual(passage["a_verifier"] + passage["rejetes"], sum(passage["causes"]["Rejeté"].values()) + sum(passage["causes"]["À vérifier"].values()), "second invariant")
-        self.assertEqual(passage["causes"]["Rejeté"], CAUSES_ATTENDUES)
+        self.assertEqual(passage["causes"]["Rejeté"], CAUSES_DEFAUT)
         self.assertEqual(passage["causes"]["À vérifier"], {})
-        self.assertEqual(passage["par_cible"], PAR_CIBLE_ATTENDU)
+        self.assertEqual(passage["par_cible"], PAR_CIBLE_DEFAUT)
         self.assertEqual(passage["regles_non_appliquees"], [])
         self.assertEqual(passage["fichier"], "export-brut-exemple.csv")
         self.assertEqual(passage["moteur"], f"leadlint {m.VERSION}")
         for chemin in passage["fichiers"].values():
             self.assertTrue((dossier / chemin).is_file(), chemin)
 
+    def test_verdict_ligne_par_ligne_cases_par_defaut(self):
+        """Le contrôle ligne par ligne d'un passage, cases par défaut, donne les verdicts comptés à la main."""
+        import openpyxl
+        dossier = self.monter()
+        self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0)
+        feuille = openpyxl.load_workbook(dossier / "resultats" / "export-brut-exemple-controle-qa.xlsx")["Contrôle QA"]
+        lignes = [[c.value for c in ligne] for ligne in feuille.iter_rows(min_row=2)]
+        obtenu = {ligne[14] - 1: (ligne[0], (ligne[9] or "").replace(" " + TIRET_CADRATIN + " ", " : ")) for ligne in lignes}
+        self.assertEqual(len(obtenu), 30)
+        for numero, (statut, cause) in LIGNES_DEFAUT.items():
+            with self.subTest(ligne=numero):
+                self.assertEqual(obtenu[numero][0], statut)
+                if statut == "Rejeté":
+                    self.assertEqual(obtenu[numero][1], cause)
+                else:
+                    self.assertEqual(obtenu[numero][1], "")
+
     def test_verdict_ligne_par_ligne(self):
-        """Les causes de l'exemple, ligne par ligne, comptées à la main : le moteur de ce dossier donne les mêmes."""
+        """Les causes de l'exemple, tout coché, ligne par ligne, comptées à la main : le moteur de ce dossier (mission complète) donne les mêmes."""
         dossier = self.monter()
         entetes, lignes = m.lire_tableau(self.EXPORT)
         _, configuration = m.charger_mission(dossier / "mission.json")
@@ -393,33 +461,55 @@ class Moulinette(Banc):
         configuration["mappingBlacklist"] = m.completer_mapping(configuration["mappingBlacklist"], liste_entetes, m.ENTETES_BLACKLIST)
         verdicts = m.valider_export_b2b(m.vers_objets(entetes, lignes), m.vers_objets(liste_entetes, liste_lignes), configuration)
         obtenu = {v["numeroLigne"] - 1: (v["statut"], m.type_probleme(v).replace(" " + TIRET_CADRATIN + " ", " : ") or None) for v in verdicts}
-        for ligne, (statut, cause) in LIGNES_ATTENDUES.items():
+        for ligne, (statut, cause) in LIGNES_TOUT.items():
             with self.subTest(ligne=ligne):
                 if statut == "Conforme":
                     self.assertEqual(obtenu[ligne], ("Conforme", None))
                 else:
                     self.assertEqual(obtenu[ligne], (statut, cause))
 
-    def test_le_fichier_nettoye_porte_la_cible(self):
+    def test_le_fichier_nettoye_garde_les_colonnes_d_origine_et_porte_la_cible(self):
         dossier = self.monter()
         self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0)
         import openpyxl
         classeur = openpyxl.load_workbook(dossier / "resultats" / "export-brut-exemple-nettoye.xlsx")
         feuille = classeur.worksheets[0]
         lignes = [[c.value for c in ligne] for ligne in feuille.iter_rows()]
-        self.assertEqual(lignes[0], ["Nom complet", "Entreprise", "Poste", "LinkedIn profil", "Email professionnel", "Mobile professionnel", "Cible"])
-        self.assertEqual(len(lignes) - 1, 11)
-        self.assertEqual(Counter(l[-1] for l in lignes[1:]), Counter(PAR_CIBLE_ATTENDU))
-        par_nom = {l[0]: l[-1] for l in lignes[1:]}
-        for numero, (statut, cible) in LIGNES_ATTENDUES.items():
+        entetes, source = m.lire_tableau(self.EXPORT)
+        self.assertEqual(lignes[0], list(entetes) + ["Cible"], "toutes les colonnes de l'export, dans leur ordre, puis la cible")
+        self.assertIn("Email professionnel", lignes[0])
+        self.assertIn("Mobile", lignes[0])
+        self.assertEqual(len(lignes) - 1, 21)
+        self.assertEqual(Counter(l[-1] for l in lignes[1:]), Counter(PAR_CIBLE_DEFAUT))
+        gardees = [numero for numero, (statut, _) in LIGNES_DEFAUT.items() if statut == "Conforme"]
+        self.assertEqual([["" if v is None else v for v in l[:-1]] for l in lignes[1:]], [list(source[numero - 1]) for numero in gardees], "les lignes gardées, intactes et dans l'ordre")
+        self.assertEqual([l[-1] for l in lignes[1:]], [LIGNES_DEFAUT[numero][1] for numero in gardees])
+        # ce qui n'a pas de filtre n'est pas jugé : la ligne 21 (Gmail) et la ligne 27 (sans email) sont gardées avec leurs données telles quelles
+        par_nom = {l[0]: l for l in lignes[1:]}
+        self.assertEqual(par_nom["Camille Exemple 21"][entetes.index("Email professionnel")], "camille21@gmail.com")
+        self.assertEqual(par_nom["Camille Exemple 27"][entetes.index("Email professionnel")] or "", "")
+        for numero, (statut, _) in LIGNES_DEFAUT.items():
             nom = f"Camille Exemple {numero:02d}"
-            if statut == "Conforme":
-                self.assertEqual(par_nom[nom], cible, nom)
-            elif numero not in (15, 16):  # deux doublons portent le nom d'une ligne gardée
+            if statut == "Rejeté" and numero not in (15, 16):  # deux doublons portent le nom d'une ligne gardée
                 self.assertNotIn(nom, par_nom, nom)
         self.assertEqual(classeur.properties.creator, "leadlint")
         for nom in ("export-brut-exemple-controle-qa.xlsx", "export-brut-exemple-conformes.xlsx"):
             self.assertTrue((dossier / "resultats" / nom).is_file(), nom)
+
+    def test_entetes_et_cellules_piegees_du_fichier_nettoye(self):
+        self.assertEqual(s._entetes_uniques(["Poste", "poste", "", "Poste", "Cible"]), ["Poste", "poste (2)", "Colonne 3", "Poste (3)", "Cible"])
+        self.assertEqual(s._cellule_nettoyee("=1+1"), "'=1+1")
+        self.assertEqual(s._cellule_nettoyee("+33 6 00 00 00 01"), "+33 6 00 00 00 01", "un numéro n'est pas modifié")
+        self.assertEqual(s._cellule_nettoyee("a\x01b"), "ab")
+        self.assertEqual(s._cellule_nettoyee(45), 45)
+        dossier = self.monter()
+        export = self.nouveau_dossier() / "piege.csv"
+        export.write_text("Nom complet,Poste,Entreprise,Notes,notes,\nAda,CEO,Atelier,=1+1,b,c\nGrace,Stagiaire,Autre,x,y,z\n", encoding="utf-8")
+        self.assertEqual(moulinette(dossier, str(export)).returncode, 0)
+        import openpyxl
+        lignes = [[c.value for c in ligne] for ligne in openpyxl.load_workbook(dossier / "resultats" / "piege-nettoye.xlsx").worksheets[0].iter_rows()]
+        self.assertEqual(lignes, [["Nom complet", "Poste", "Entreprise", "Notes", "notes (2)", "Colonne 6", "Cible"],
+                                  ["Ada", "CEO", "Atelier", "'=1+1", "b", "c", "Dirigeants"]])
 
     def test_un_export_xlsx_donne_les_memes_chiffres(self):
         import openpyxl
@@ -433,8 +523,8 @@ class Moulinette(Banc):
         classeur.save(fichier)
         processus = moulinette(dossier, str(fichier))
         self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
-        self.assertEqual(self.passage(dossier)["causes"]["Rejeté"], CAUSES_ATTENDUES)
-        self.assertEqual(self.passage(dossier)["par_cible"], PAR_CIBLE_ATTENDU)
+        self.assertEqual(self.passage(dossier)["causes"]["Rejeté"], CAUSES_DEFAUT)
+        self.assertEqual(self.passage(dossier)["par_cible"], PAR_CIBLE_DEFAUT)
 
     def test_regle_modifiee_apres_validation_bloque(self):
         dossier = self.monter()
@@ -442,17 +532,58 @@ class Moulinette(Banc):
         pays = next(r for r in mission["configuration"]["regles"] if r["id"] == "r-pays-est_dans")
         pays["valeur"].append("Belgique")
         self.ecrire_mission(dossier, mission)
+        self.tout_cocher(dossier)
         processus = moulinette(dossier, str(self.EXPORT))
         self.assertEqual(processus.returncode, 2, processus.stdout + processus.stderr)
         self.assertIn("Vos règles ont changé depuis la validation", processus.stdout)
         self.assertFalse((dossier / "resultats").exists() and list((dossier / "resultats").glob("*")), "rien n'est livré")
         # Le contrôle négatif : sans ce garde-fou, le même changement ferait passer une ligne de plus (la ligne 22, en Belgique).
-        entetes, lignes = m.lire_tableau(self.EXPORT)
-        diagnostic = subprocess.run(
-            [sys.executable, str(SCRIPTS / "leadlint.py"), "check", str(self.EXPORT), "--mission", str(dossier / "mission.json"),
-             "--exclusions", str(dossier / "exclusions.csv"), "--diagnostic", "--json", "-o", str(self.nouveau_dossier())],
-            capture_output=True, text=True, encoding="utf-8")
-        self.assertEqual(json.loads(diagnostic.stdout)["conformes"], 12, "le changement modifie bien les verdicts : le blocage n'est pas inutile")
+        def conformes(mission: Path) -> int:
+            diagnostic = subprocess.run(
+                [sys.executable, str(SCRIPTS / "leadlint.py"), "check", str(self.EXPORT), "--mission", str(mission),
+                 "--exclusions", str(dossier / "exclusions.csv"), "--diagnostic", "--json", "-o", str(self.nouveau_dossier())],
+                capture_output=True, text=True, encoding="utf-8")
+            return json.loads(diagnostic.stdout)["conformes"]
+
+        saine = self.nouveau_dossier() / "mission.json"
+        pays["valeur"].remove("Belgique")
+        saine.write_text(json.dumps(mission, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual((conformes(saine), conformes(dossier / "mission.json")), (13, 14), "le changement modifie bien les verdicts : le blocage n'est pas inutile")
+
+    def test_une_valeur_retouchee_a_la_main_bloque_meme_si_son_filtre_est_decoche(self):
+        """(a) Les cases ne valident rien : toute valeur de règle retouchée dans mission.json bloque, quelle que soit la case."""
+        retouches = {
+            "r-poste-contient_un": lambda r: r["valeur"].append("Directeur technique"),      # filtre verrouillé
+            "r-poste-ne_contient_aucun": lambda r: r["valeur"].remove("stagiaire"),          # coché par défaut
+            "r-pays-est_dans": lambda r: r["valeur"].append("Belgique"),                     # décoché par défaut
+            "r-employes_visibles-entre": lambda r: r["valeur"].update(max=500),              # décoché par défaut
+            "r-activite-ne_contient_aucun": lambda r: r["valeur"].clear(),                   # décoché par défaut
+        }
+        for identifiant, retoucher in retouches.items():
+            for etat, coches in (("par défaut", None), ("tout coché", CASES_TOUT)):
+                with self.subTest(regle=identifiant, cases=etat):
+                    dossier = self.monter(coches=coches)
+                    mission = self.mission(dossier)
+                    retoucher(next(r for r in mission["configuration"]["regles"] if r["id"] == identifiant))
+                    self.ecrire_mission(dossier, mission)
+                    processus = moulinette(dossier, str(self.EXPORT))
+                    self.assertEqual(processus.returncode, 2, processus.stdout + processus.stderr)
+                    self.assertIn("Vos règles ont changé depuis la validation", processus.stdout)
+                    self.assertFalse((dossier / "resultats").exists() and list((dossier / "resultats").glob("*")), "rien n'est livré")
+
+    def test_une_regle_eteinte_a_la_main_bloque(self):
+        """(d) Les cases se changent dans la page ou dans reglages.json, jamais dans mission.json : éteindre une règle là bloque."""
+        dossier = self.monter()
+        mission = self.mission(dossier)
+        next(r for r in mission["configuration"]["regles"] if r["id"] == "r-doublon-unique")["active"] = False
+        self.ecrire_mission(dossier, mission)
+        self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 2)
+        dossier = self.monter()
+        mission = self.mission(dossier)
+        mission["configuration"]["blacklist"]["obligatoire"] = False
+        mission["configuration"]["champsObligatoires"] = []
+        self.ecrire_mission(dossier, mission)
+        self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 2)
 
     def test_signature_effacee_bloque(self):
         dossier = self.monter()
@@ -478,7 +609,7 @@ class Moulinette(Banc):
         self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 2)
 
     def test_liste_d_exclusion_changee_bloque(self):
-        dossier = self.monter()
+        dossier = self.monter(coches={"liste_exclusion": True})
         liste = dossier / "exclusions.csv"
         original = liste.read_text(encoding="utf-8")
         # une entreprise de plus : le nombre de lignes change
@@ -494,11 +625,12 @@ class Moulinette(Banc):
         self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0, "la liste d'origine rouvre le passage")
 
     def test_liste_d_exclusion_absente_bloque(self):
-        dossier = self.monter()
+        dossier = self.monter(coches={"liste_exclusion": True})
         (dossier / "exclusions.csv").unlink()
         processus = moulinette(dossier, str(self.EXPORT))
         self.assertEqual(processus.returncode, 2)
         self.assertIn("Il manque la liste d'exclusion", processus.stdout)
+        self.assertIn("décochez « Liste d'exclusion »", processus.stdout)
         # donnée à la main, elle suffit
         processus = moulinette(dossier, str(self.EXPORT), "--exclusions", str(EXEMPLES / "exclusions-exemple.csv"))
         self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
@@ -531,10 +663,15 @@ class Moulinette(Banc):
         dossier = self.monter(reponses)
         processus = moulinette(dossier, str(self.EXPORT))
         self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
+        self.assertNotIn("Règles non appliquées", processus.stdout, "un filtre décoché ne s'applique pas : il n'a pas à se plaindre de sa colonne")
+        self.assertEqual(self.passage(dossier)["regles_non_appliquees"], [])
+        self.tout_cocher(dossier)
+        processus = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
         self.assertIn("Règles non appliquées, faute de colonne dans votre export : Code NAF", processus.stdout)
         passage = self.passage(dossier)
         self.assertEqual(passage["regles_non_appliquees"], [{"regle": "r-code_naf-est_dans", "champ": "codeNaf", "colonne": "Code NAF"}])
-        self.assertEqual(passage["conformes"], 11, "une règle sans colonne ne rejette personne (donnée absente : ignorée)")
+        self.assertEqual(passage["conformes"], 13, "une règle sans colonne ne rejette personne (donnée absente : ignorée)")
         self.assertIn("Règles non appliquées : votre fichier n'a pas la colonne « Code NAF »", texte_visible(self.page(dossier)))
 
     def test_le_script_utilise_le_moteur_de_son_dossier(self):
@@ -556,14 +693,14 @@ class Moulinette(Banc):
         shutil.rmtree(dossier)
         processus = moulinette(nouveau, str(self.EXPORT))
         self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
-        self.assertEqual(self.passage(nouveau)["conformes"], 11)
+        self.assertEqual(self.passage(nouveau)["conformes"], 21)
 
     def test_deux_passages_de_suite(self):
         dossier = self.monter()
         premier = moulinette(dossier, str(self.EXPORT))
         second = moulinette(dossier, str(self.EXPORT))
         self.assertEqual((premier.returncode, second.returncode), (0, 0))
-        self.assertEqual(self.passage(dossier)["conformes"], 11)
+        self.assertEqual(self.passage(dossier)["conformes"], 21)
 
 
 class PageDesRegles(Banc):
@@ -593,8 +730,15 @@ class PageDesRegles(Banc):
             "Zero Gravity AI",
         ):
             self.assertIn(phrase, visible)
-        for famille in ("Entreprise", "Contact", "Exclusions", "Qualité"):
-            self.assertRegex(page, rf"<h3>{famille}</h3>")
+        familles = re.findall(r'<article class="carte"><h3>([^<]+)</h3>', page)
+        self.assertEqual(familles, ["Contact", "Exclusions", "Qualité", "Entreprise (facultatif)"], "le contact d'abord")
+        for titre, pastille in (("Poste voulu", "actif"), ("Postes écartés", "actif"), ("Doublons", "actif"), ("Liste d'exclusion", "désactivé"),
+                                ("Lignes incomplètes", "désactivé"), ("Pays", "désactivé"), ("Activité voulue", "désactivé"), ("Activité écartée", "désactivé"),
+                                ("Taille", "désactivé")):
+            classe = "etat etat-actif" if pastille == "actif" else "etat"
+            self.assertIn(f'<p class="regle-titre">{html.escape(titre)}<span class="{classe}">{pastille}</span></p>', page, titre)
+        self.assertNotIn("Email professionnel", visible, "leadlint-setup ne contrôle ni les emails ni les mobiles")
+        self.assertIn("Choisissez vos filtres dans cette même page", visible)
         self.assertIn("<details><summary>Détail</summary>", page)
         self.assertIn("mots entiers seulement", visible)
         self.assertIn("est compris entre", visible)
@@ -630,20 +774,28 @@ class PageDesRegles(Banc):
         self.assertIn("sceau-modifie", self.page(dossier))
 
     def test_liste_modifiee_se_voit_sur_la_page(self):
-        dossier = self.monter()
+        dossier = self.monter(coches={"liste_exclusion": True})
         (dossier / "exclusions.csv").write_text("Entreprise,Site\nAutre,autre.example\n", encoding="utf-8")
         self.assertEqual(setup("page", str(dossier))[0], 0)
         self.assertIn("Liste d'exclusion modifiée depuis la validation : à revalider", texte_visible(self.page(dossier)))
+        self.cocher(dossier, liste_exclusion=False)
+        self.assertEqual(setup("page", str(dossier))[0], 0)
+        self.assertIn("Règles validées le 17/11/2026", texte_visible(self.page(dossier)), "une liste décochée ne change pas le sceau")
 
     def test_le_dernier_passage_se_lit_sur_la_page(self):
         dossier = self.monter()
         self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0)
         visible = texte_visible(self.page(dossier))
-        self.assertRegex(visible, r"11\s+Gardés\s+0\s+À vérifier\s+19\s+Rejetés")
+        self.assertRegex(visible, r"21\s+Gardés\s+0\s+À vérifier\s+9\s+Rejetés")
         self.assertIn("sur 30 lignes", visible)
+        self.assertIn(PHRASE_FILTRES_DEFAUT, re.sub(r"\s+", " ", visible), "la page dit quels filtres étaient actifs")
         self.assertIn("Mauvais intitulé de poste 7", re.sub(r"\s+", " ", visible))
-        self.assertIn("Champ obligatoire manquant : entreprise", visible)
-        self.assertIn("Dirigeants 6", re.sub(r"\s+", " ", visible))
+        self.assertIn("Doublon 2", re.sub(r"\s+", " ", visible))
+        self.assertNotIn("Champ obligatoire manquant", visible)
+        self.assertIn("Dirigeants 15", re.sub(r"\s+", " ", visible))
+        self.cocher(dossier, champs_obligatoires=True)
+        self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0)
+        self.assertIn("Champ obligatoire manquant : entreprise", texte_visible(self.page(dossier)))
         self.assertNotIn("Aucun fichier passé", visible)
         self.assertNotIn("Ce passage date d'avant", visible)
 
@@ -701,6 +853,9 @@ class Vocabulaire(Banc):
         textes += [("validate", setup("validate", str(dossier))[1])]
         textes += [("passage", moulinette(dossier, str(self.EXPORT)).stdout)]
         textes += [("page", texte_visible(self.page(dossier)))]
+        self.tout_cocher(dossier)
+        textes += [("passage tout coché", moulinette(dossier, str(self.EXPORT)).stdout)]
+        textes += [("page tout coché", texte_visible(self.page(dossier)))]
         (dossier / "exclusions.csv").unlink()
         textes += [("liste absente", moulinette(dossier, str(self.EXPORT)).stdout)]
         for origine, texte in textes:
@@ -819,10 +974,17 @@ class Interface(Banc):
         visible = texte_visible(re.sub(r"<script.*?</script>", " ", page, flags=re.S))
         for phrase in (
             "Prospection ESN exemple", "pour Camille Exemple", "Règles validées le 17/11/2026",
-            "Glissez votre export ici (.csv ou .xlsx) ou cliquez pour le choisir", "Liste d'exclusion : exclusions.csv, 3 lignes validées.",
+            "Glissez votre export ici (.csv ou .xlsx) ou cliquez pour le choisir", "Liste d'exclusion : décochée (exclusions.csv n'est pas utilisée).",
             "Voir mes règles", "Fermer la moulinette", "Zero Gravity AI",
+            "Ce que je filtre", "Contacts", "Entreprise (un autre traitement, facultatif)", "Intitulé de poste dans mes cibles", "Toujours actif.",
+            "Cibles : Dirigeants, Direction commerciale.", "Intitulés à écarter", "Doublons", "Lignes incomplètes", "Pays", "Activité", "Taille",
+            "Écarte un poste qui contient : stagiaire, assistant, assistante, freelance, open to work.", "Entre 11 et 200 employés visibles sur LinkedIn.",
         ):
             self.assertIn(phrase, visible)
+        for identifiant, attendu in {"poste": " checked disabled data-verrou", "postes_exclus": " checked", "doublons": " checked", "liste_exclusion": "",
+                                     "champs_obligatoires": "", "pays": "", "activite": "", "taille": ""}.items():
+            self.assertIn(f'<input type="checkbox" data-filtre="{identifiant}"{attendu}>', page, identifiant)
+        self.assertNotIn('data-filtre="naf"', page, "pas de règle NAF dans l'exemple : pas de case")
         self.assertRegex(page, r'<input type="file" id="fichier" accept="\.csv,\.xlsx,\.xlsm">')
         self.assertIn(f'href="/regles?t={jeton}"', page)
         self.assertIn("prefers-color-scheme:dark", page)
@@ -846,8 +1008,9 @@ class Interface(Banc):
         processus, port, jeton = self.demarrer(dossier)
         page = self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8")
         self.assertIn("Liste d&#x27;exclusion : aucune.", page)
-        # Une liste attendue mais absente, puis une liste changée depuis la validation.
-        dossier = self.monter()
+        self.assertNotIn('data-filtre="liste_exclusion"', page)
+        # Une liste attendue mais absente, puis une liste changée depuis la validation (la case est cochée).
+        dossier = self.monter(coches={"liste_exclusion": True})
         processus, port, jeton = self.demarrer(dossier)
         (dossier / "exclusions.csv").write_text("Entreprise\nAutre\n", encoding="utf-8")
         page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
@@ -856,9 +1019,20 @@ class Interface(Banc):
         (dossier / "exclusions.csv").unlink()
         page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
         self.assertIn("Liste d'exclusion : introuvable. Posez-la dans ce dossier sous le nom exclusions.csv.", page)
+        self.assertIn('data-filtre="liste_exclusion" checked>', page, "cochée sans liste : la case reste visible pour pouvoir la décocher")
+
+    def test_la_case_de_la_liste_n_est_proposee_que_si_une_liste_existe(self):
+        dossier = self.monter(exclusions=False, valider=False)
+        self.assertEqual(setup("validate", str(dossier), "--exclusions", str(EXEMPLES / "exclusions-exemple.csv"), "--date", "2026-11-17")[0], 0)
+        _, port, jeton = self.demarrer(dossier)
+        self.assertIn('data-filtre="liste_exclusion">', self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
+        (dossier / "exclusions.csv").unlink()
+        page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
+        self.assertNotIn('data-filtre="liste_exclusion"', page)
+        self.assertIn("Liste d'exclusion : décochée, et aucune liste dans ce dossier", page)
 
     def test_la_page_n_est_pas_validee_avant_la_validation(self):
-        dossier = self.monter(valider=False)
+        dossier = self.monter(valider=False, coches={"liste_exclusion": True})
         _, port, jeton = self.demarrer(dossier)
         page = html.unescape(self.appeler(port, "GET", f"/?t={jeton}")[2].decode("utf-8"))
         self.assertIn(SCEAU_ATTENTE, page)
@@ -893,10 +1067,12 @@ class Interface(Banc):
         self.assertEqual(code, 200)
         self.assertEqual(tetes["content-type"], "application/json; charset=utf-8")
         self.assertEqual((donnees["ok"], donnees["bloque"], donnees["justes"]), (True, False, True))
-        self.assertEqual((donnees["total"], donnees["conformes"], donnees["a_verifier"], donnees["rejetes"]), (30, 11, 0, 19))
-        self.assertEqual({cause: n for cause, n in donnees["causes"]}, {cause.replace(" " + TIRET_CADRATIN + " ", " : "): n for cause, n in CAUSES_ATTENDUES.items()})
+        self.assertEqual((donnees["total"], donnees["conformes"], donnees["a_verifier"], donnees["rejetes"]), CHIFFRES_DEFAUT)
+        self.assertEqual({cause: n for cause, n in donnees["causes"]}, CAUSES_DEFAUT)
         self.assertEqual(donnees["causes"], sorted(donnees["causes"], key=lambda ligne: -ligne[1]))
-        self.assertEqual(dict(donnees["par_cible"]), PAR_CIBLE_ATTENDU)
+        self.assertEqual(dict(donnees["par_cible"]), PAR_CIBLE_DEFAUT)
+        self.assertEqual(donnees["filtres_texte"], PHRASE_FILTRES_DEFAUT)
+        self.assertEqual({f["id"]: f["actif"] for f in donnees["filtres"]}, CASES_DEFAUT)
         self.assertEqual((donnees["regles_non_appliquees"], donnees["avertissement"]), ([], None))
         self.assertEqual(donnees["mission"], "Camille Exemple / Prospection ESN exemple")
         self.assertNotIn(TIRET_CADRATIN, json.dumps(donnees, ensure_ascii=False))
@@ -911,12 +1087,12 @@ class Interface(Banc):
         self.assertEqual(contenu, (dossier / "resultats" / "export-brut-exemple-nettoye.xlsx").read_bytes())
         import openpyxl
         lignes = [[c.value for c in ligne] for ligne in openpyxl.load_workbook(io.BytesIO(contenu)).worksheets[0].iter_rows()]
-        self.assertEqual((len(lignes) - 1, lignes[0][-1]), (11, "Cible"))
-        self.assertEqual(Counter(ligne[-1] for ligne in lignes[1:]), Counter(PAR_CIBLE_ATTENDU))
+        self.assertEqual((len(lignes) - 1, lignes[0][-1]), (21, "Cible"))
+        self.assertEqual(Counter(ligne[-1] for ligne in lignes[1:]), Counter(PAR_CIBLE_DEFAUT))
         code, _, controle = self.appeler(port, "GET", liens["controle"]["url"])
         self.assertEqual((code, controle), (200, (dossier / "resultats" / "export-brut-exemple-controle-qa.xlsx").read_bytes()))
         # le passage est aussi inscrit dans la page des règles
-        self.assertEqual(self.passage(dossier)["conformes"], 11)
+        self.assertEqual(self.passage(dossier)["conformes"], 21)
         regles = texte_visible(self.appeler(port, "GET", f"/regles?t={jeton}")[2].decode("utf-8"))
         self.assertIn("sur 30 lignes", regles)
 
@@ -925,7 +1101,7 @@ class Interface(Banc):
         donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
         ligne = moulinette(dossier, str(self.EXPORT))
         self.assertEqual(ligne.returncode, 0, ligne.stderr)
-        self.assertEqual(ligne.stdout.splitlines()[1], "Lignes 30 · gardées 11 · à vérifier 0 · rejetées 19")
+        self.assertEqual(ligne.stdout.splitlines()[1], "Lignes 30 · gardées 21 · à vérifier 0 · rejetées 9")
         self.assertEqual(ligne.stdout.splitlines()[2], "Rejetées, par cause : " + " · ".join(f"{cause} {n}" for cause, n in donnees["causes"]))
         self.assertEqual(ligne.stdout.splitlines()[3], "Gardées, par cible : " + " · ".join(f"{cible} {n}" for cible, n in donnees["par_cible"]))
 
@@ -936,13 +1112,14 @@ class Interface(Banc):
         lignes = processus.stdout.splitlines()
         self.assertEqual(lignes[:5], [
             "« Camille Exemple / Prospection ESN exemple » · export-brut-exemple.csv",
-            "Lignes 30 · gardées 11 · à vérifier 0 · rejetées 19",
-            "Rejetées, par cause : Mauvais intitulé de poste 7 · Doublon 2 · Liste d'exclusion 2 · Email professionnel 2 · Employés visibles LinkedIn 2 · Mauvaise entreprise 2 · Pays 1 · Champ obligatoire manquant : entreprise 1",
-            "Gardées, par cible : Dirigeants 6 · Direction commerciale 5",
+            "Lignes 30 · gardées 21 · à vérifier 0 · rejetées 9",
+            "Rejetées, par cause : Mauvais intitulé de poste 7 · Doublon 2",
+            "Gardées, par cible : Dirigeants 15 · Direction commerciale 6",
             "Contrôles du bilan : justes",
         ])
-        self.assertEqual(len(lignes), 8)
-        for debut, fin in zip(lignes[5:], ("Contacts nettoyés : ", "Contrôle ligne par ligne : ", "Vos règles et ce passage : ")):
+        self.assertEqual(lignes[5], PHRASE_FILTRES_DEFAUT)
+        self.assertEqual(len(lignes), 9)
+        for debut, fin in zip(lignes[6:], ("Contacts nettoyés : ", "Contrôle ligne par ligne : ", "Vos règles et ce passage : ")):
             self.assertTrue(debut.startswith(fin), debut)
         self.assertFalse((dossier / "depots").exists(), "la ligne de commande ne dépose rien")
         # un fichier ET --ouvrir : une phrase claire, rien ne démarre
@@ -972,7 +1149,7 @@ class Interface(Banc):
         self.assertEqual(ligne.stdout.splitlines()[1], "Le contrôle avant lancement bloque : rien n'est livré.")
 
     def test_les_autres_blocages_sont_dits_avec_ce_qu_il_faut_faire(self):
-        dossier, _, port, jeton = self.monter_et_demarrer()
+        dossier, _, port, jeton = self.monter_et_demarrer(coches={"liste_exclusion": True})
         # la liste d'exclusion n'est plus celle qui a été validée
         (dossier / "exclusions.csv").write_text("Entreprise\nAlpha\nBeta\n", encoding="utf-8")
         donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
@@ -997,7 +1174,7 @@ class Interface(Banc):
         self.assertNotIn("telechargements", donnees)
 
     def test_une_regle_sans_colonne_est_dite(self):
-        dossier, _, port, jeton = self.monter_et_demarrer()
+        dossier, _, port, jeton = self.monter_et_demarrer(coches=CASES_TOUT)
         sans_pays = re.sub(r"\bPays\b", "Zone", self.EXPORT.read_text(encoding="utf-8"), count=1)
         donnees = self.deposer(port, jeton, "sans-pays.csv", sans_pays.encode("utf-8"))[2]
         self.assertTrue(donnees["ok"], donnees)
@@ -1014,7 +1191,7 @@ class Interface(Banc):
         self.assertTrue(donnees["erreur"])
         self.assertNotIn("Traceback", donnees["erreur"])
         self.assertEqual(self.appeler(port, "GET", f"/?t={jeton}")[0], 200, "la page continue de répondre")
-        self.assertEqual(self.deposer(port, jeton, "export-brut-exemple.csv")[2]["conformes"], 11, "et de traiter")
+        self.assertEqual(self.deposer(port, jeton, "export-brut-exemple.csv")[2]["conformes"], 21, "et de traiter")
         self.assertIsNone(processus.poll())
 
     # --- la sécurité
@@ -1032,7 +1209,10 @@ class Interface(Banc):
                 self.assertEqual(self.appeler(port, "GET", f"/regles{requete}")[0], 403)
                 self.assertEqual(self.appeler(port, "GET", f"/resultats/export-brut-exemple-nettoye.xlsx{requete}")[0], 403)
                 self.assertEqual(self.appeler(port, "POST", f"/fermer{requete}", b"")[0], 403)
+                reglage = f"/reglage{requete}&id=doublons&actif=0" if requete else "/reglage?id=doublons&actif=0"
+                self.assertEqual(self.appeler(port, "POST", reglage, b"")[0], 403)
         self.assertFalse((dossier / "depots" / "a.csv").exists(), "un dépôt refusé n'écrit rien")
+        self.assertEqual(self.reglages(dossier), CASES_DEFAUT, "une case refusée n'écrit rien")
         # le bon jeton passe, et la moulinette tourne encore
         self.assertEqual(self.appeler(port, "GET", f"/resultats/export-brut-exemple-nettoye.xlsx?t={jeton}")[0], 200)
 
@@ -1042,6 +1222,7 @@ class Interface(Banc):
             with self.subTest(hote=hote):
                 self.assertEqual(self.appeler(port, "GET", f"/?t={jeton}", entetes={"Host": hote})[0], 403)
                 self.assertEqual(self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", b"x", {"Host": hote})[0], 403)
+                self.assertEqual(self.appeler(port, "POST", f"/reglage?t={jeton}&id=doublons&actif=0", b"", {"Host": hote})[0], 403)
                 self.assertEqual(self.appeler(port, "GET", f"/regles?t={jeton}", entetes={"Host": hote})[0], 403)
         for hote in (f"127.0.0.1:{port}", f"localhost:{port}", f"LOCALHOST:{port}"):
             with self.subTest(hote=hote):
@@ -1053,6 +1234,7 @@ class Interface(Banc):
             with self.subTest(origine=origine):
                 code = self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", self.EXPORT.read_bytes(), {"Origin": origine})[0]
                 self.assertEqual(code, 403)
+                self.assertEqual(self.appeler(port, "POST", f"/reglage?t={jeton}&id=doublons&actif=0", b"", {"Origin": origine})[0], 403)
         for origine in (f"http://127.0.0.1:{port}", f"http://localhost:{port}"):
             with self.subTest(origine=origine):
                 self.assertEqual(self.appeler(port, "POST", f"/passer?t={jeton}&nom=a.csv", self.EXPORT.read_bytes(), {"Origin": origine})[0], 200)
@@ -1151,7 +1333,7 @@ class Interface(Banc):
         self.assertEqual((code, json.loads(corps)), (200, {"ok": True}))
         self.assertEqual(processus.wait(timeout=20), 0)
         reste = processus.stdout.read().splitlines()
-        self.assertEqual(reste, ["Passage : export-brut-exemple.csv · 30 lignes · gardées 11 · à vérifier 0 · rejetées 19.", "Moulinette fermée."])
+        self.assertEqual(reste, ["Passage : export-brut-exemple.csv · 30 lignes · gardées 21 · à vérifier 0 · rejetées 9.", "Moulinette fermée."])
         self.assertEqual(processus.stderr.read(), "")
         self.assertEqual(self.ligne_ouverture, f"Ouvrez cette adresse dans votre navigateur : http://127.0.0.1:{port}/?t={jeton}. Ctrl+C pour fermer.")
         with self.assertRaises(OSError):
@@ -1176,6 +1358,213 @@ class Interface(Banc):
         self.assertNotIn("Traceback", processus.stderr)
 
 
+class Filtres(Banc):
+    """Les cases à cocher : retenues dans reglages.json, appliquées par la page comme par la ligne de commande, sans jamais toucher à la validation."""
+
+    demarrer = Interface.demarrer
+    arreter = staticmethod(Interface.arreter)
+    appeler = Interface.appeler
+    deposer = Interface.deposer
+    monter_et_demarrer = Interface.monter_et_demarrer
+
+    def regler(self, port: int, jeton: str, identifiant: str, actif: bool) -> tuple:
+        code, _, corps = self.appeler(port, "POST", f"/reglage?t={jeton}&id={identifiant}&actif={1 if actif else 0}", b"")
+        return code, json.loads(corps.decode("utf-8"))
+
+    @staticmethod
+    def causes(donnees: dict) -> dict:
+        return {cause: n for cause, n in donnees["causes"]}
+
+    # --- à la création
+
+    def test_cases_par_defaut_a_la_creation(self):
+        reponses = lire_exemple()
+        reponses["secteurs"]["codes_naf"] = ["62.01Z"]
+        travail = self.nouveau_dossier()
+        (travail / "reponses.json").write_text(json.dumps(reponses, ensure_ascii=False), encoding="utf-8")
+        code, sortie, erreurs = setup("create", str(travail / "reponses.json"), "-o", str(travail / "m"), "--json")
+        self.assertEqual(code, 0, erreurs)
+        dossier = travail / "m"
+        donnees = json.loads(sortie)
+        self.assertIn("reglages.json", donnees["fichiers"])
+        self.assertEqual(self.reglages(dossier), {**CASES_DEFAUT, "naf": False}, "seuls les filtres définis ont une case ; seuls trois sont cochés")
+        self.assertEqual([(f["id"], f["actif"]) for f in donnees["filtres"]], [
+            ("poste", True), ("postes_exclus", True), ("doublons", True), ("liste_exclusion", False), ("champs_obligatoires", False),
+            ("pays", False), ("activite", False), ("naf", False), ("taille", False)])
+        self.assertEqual({f["id"] for f in donnees["filtres"] if f["actif"]}, {"poste", "postes_exclus", "doublons"})
+
+    def test_sans_cible_entreprise_il_ne_reste_que_les_filtres_du_contact(self):
+        reponses = {"nom": "Minimale", "cibles": [{"nom": "Dirigeants", "intitules": ["CEO"]}], "postes_exclus": ["stagiaire"]}
+        dossier = self.monter(reponses, exclusions=False)
+        self.assertEqual(self.reglages(dossier), {"poste": True, "postes_exclus": True, "doublons": True, "champs_obligatoires": False})
+
+    def test_recreer_garde_les_cases_deja_posees(self):
+        dossier = self.monter()
+        self.cocher(dossier, pays=True, doublons=False)
+        code, _, erreurs = setup("create", str(dossier / "reponses.json"), "-o", str(dossier), "--force")
+        self.assertEqual(code, 0, erreurs)
+        self.assertEqual(self.reglages(dossier), {**CASES_DEFAUT, "pays": True, "doublons": False})
+
+    # --- par la page
+
+    def test_changer_une_case_refait_le_passage_sur_le_meme_fichier(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        # Aucun export déposé : la case s'enregistre, rien d'autre ne se passe.
+        code, reponse = self.regler(port, jeton, "taille", True)
+        self.assertEqual((code, reponse["ok"], reponse["passage"]), (200, True, None))
+        self.assertTrue(self.reglages(dossier)["taille"])
+        self.assertEqual(self.regler(port, jeton, "taille", False)[0], 200)
+        self.assertFalse((dossier / "dernier-passage.json").exists())
+        # Un export déposé, cases par défaut.
+        donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
+        self.assertEqual((donnees["conformes"], donnees["rejetes"]), (21, 9))
+        # Liste d'exclusion cochée : les lignes 17 et 18 sortent, sans redéposer le fichier.
+        code, reponse = self.regler(port, jeton, "liste_exclusion", True)
+        self.assertEqual((code, reponse["ok"]), (200, True))
+        self.assertEqual({f["id"]: f["actif"] for f in reponse["filtres"]}, {**CASES_DEFAUT, "liste_exclusion": True})
+        nouveau = reponse["passage"]
+        self.assertEqual((nouveau["ok"], nouveau["fichier"], nouveau["total"], nouveau["conformes"], nouveau["rejetes"]), (True, "export-brut-exemple.csv", 30, 19, 11))
+        self.assertEqual(self.causes(nouveau), {"Mauvais intitulé de poste": 7, "Doublon": 2, "Liste d'exclusion": 2})
+        self.assertEqual(dict(nouveau["par_cible"]), {"Dirigeants": 14, "Direction commerciale": 5})
+        self.assertIn("Liste d'exclusion", nouveau["filtres_texte"].split(" · désactivés")[0])
+        self.assertTrue(self.reglages(dossier)["liste_exclusion"], "enregistré aussitôt")
+        self.assertEqual(self.passage(dossier)["conformes"], 19, "le bilan du dossier suit")
+        import openpyxl
+        contenu = self.appeler(port, "GET", nouveau["telechargements"]["nettoye"]["url"])[2]
+        self.assertEqual(len(list(openpyxl.load_workbook(io.BytesIO(contenu)).worksheets[0].iter_rows())) - 1, 19, "le téléchargement est à jour")
+        # Les autres cases, une à une : chaque coche retire exactement les lignes comptées à la main.
+        for identifiant, conformes in (("champs_obligatoires", 18), ("pays", 17), ("activite", 15), ("taille", 13)):
+            with self.subTest(case=identifiant):
+                reponse = self.regler(port, jeton, identifiant, True)[1]
+                self.assertEqual(reponse["passage"]["conformes"], conformes)
+        tout = reponse["passage"]
+        self.assertEqual(self.causes(tout), {cause.replace(" " + TIRET_CADRATIN + " ", " : "): n for cause, n in CAUSES_TOUT.items()})
+        self.assertEqual(dict(tout["par_cible"]), PAR_CIBLE_TOUT)
+        self.assertEqual({f["id"]: f["actif"] for f in tout["filtres"]}, CASES_TOUT)
+        # Décochée de nouveau : les deux lignes reviennent.
+        reponse = self.regler(port, jeton, "liste_exclusion", False)[1]
+        self.assertEqual((reponse["passage"]["conformes"], self.reglages(dossier)["liste_exclusion"]), (15, False))
+
+    def test_la_page_des_regles_dit_quels_filtres_sont_actifs(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        self.deposer(port, jeton, "export-brut-exemple.csv")
+        self.regler(port, jeton, "liste_exclusion", True)
+        page = self.appeler(port, "GET", f"/regles?t={jeton}")[2].decode("utf-8")
+        self.assertIn('<p class="regle-titre">Liste d&#x27;exclusion<span class="etat etat-actif">actif</span></p>', page)
+        self.assertIn('<p class="regle-titre">Pays<span class="etat">désactivé</span></p>', page)
+        self.assertIn("Filtres actifs : Intitulé de poste dans mes cibles, Intitulés à écarter, Doublons, Liste d'exclusion"
+                      " · désactivés : Lignes incomplètes, Pays, Activité, Taille", re.sub(r"\s+", " ", texte_visible(page)))
+
+    def test_les_cases_se_retiennent_d_un_lancement_a_l_autre(self):
+        dossier, processus, port, jeton = self.monter_et_demarrer()
+        self.assertEqual(self.regler(port, jeton, "pays", True)[0], 200)
+        self.assertEqual(self.regler(port, jeton, "doublons", False)[0], 200)
+        self.assertEqual(self.appeler(port, "POST", f"/fermer?t={jeton}", b"")[0], 200)
+        self.assertEqual(processus.wait(timeout=20), 0)
+        self.assertEqual(self.reglages(dossier), {**CASES_DEFAUT, "pays": True, "doublons": False})
+        _, port2, jeton2 = self.demarrer(dossier)
+        page = self.appeler(port2, "GET", f"/?t={jeton2}")[2].decode("utf-8")
+        self.assertIn('data-filtre="pays" checked>', page)
+        self.assertIn('data-filtre="doublons">', page)
+        self.assertIn('data-filtre="postes_exclus" checked>', page)
+        donnees = self.deposer(port2, jeton2, "export-brut-exemple.csv")[2]
+        self.assertEqual((donnees["conformes"], donnees["rejetes"]), (22, 8), "pays coché : la ligne 22 sort ; doublons décoché : les lignes 15 et 16 restent")
+        self.assertEqual(self.causes(donnees), {"Mauvais intitulé de poste": 7, "Pays": 1})
+        # la ligne de commande applique les mêmes cases
+        ligne = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(ligne.returncode, 0, ligne.stderr)
+        self.assertIn("Lignes 30 · gardées 22 · à vérifier 0 · rejetées 8", ligne.stdout)
+        self.assertIn("Filtres actifs : Intitulé de poste dans mes cibles, Intitulés à écarter, Pays · désactivés : Doublons, Liste d'exclusion, Lignes incomplètes, Activité, Taille", ligne.stdout)
+
+    def test_la_ligne_de_commande_lit_reglages_json_ecrit_a_la_main(self):
+        dossier = self.monter()
+        (dossier / "reglages.json").write_text(json.dumps({"filtres": {"liste_exclusion": True}}), encoding="utf-8")
+        ligne = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(ligne.returncode, 0, ligne.stdout + ligne.stderr)
+        self.assertIn("Lignes 30 · gardées 19 · à vérifier 0 · rejetées 11", ligne.stdout)
+        self.assertIn("Liste d'exclusion 2", ligne.stdout)
+        (dossier / "reglages.json").unlink()
+        self.assertIn("gardées 21", moulinette(dossier, str(self.EXPORT)).stdout, "sans fichier, les cases par défaut")
+        (dossier / "reglages.json").write_text("{pas du json", encoding="utf-8")
+        self.assertIn("gardées 21", moulinette(dossier, str(self.EXPORT)).stdout, "un fichier illisible ne casse rien : cases par défaut")
+
+    # --- ce qui est refusé
+
+    def test_la_case_de_l_intitule_est_verrouillee_cote_serveur(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        avant = (dossier / "reglages.json").read_bytes()
+        code, reponse = self.regler(port, jeton, "poste", False)
+        self.assertEqual((code, reponse["ok"]), (400, False))
+        self.assertIn("toujours actif", reponse["erreur"])
+        self.assertEqual((dossier / "reglages.json").read_bytes(), avant, "rien n'a été écrit")
+        self.assertEqual(self.regler(port, jeton, "poste", True)[0], 200, "la cocher (elle l'est déjà) ne pose pas de problème")
+        # un identifiant inconnu, un filtre que la mission n'a pas, une valeur de case illisible
+        self.assertEqual(self.regler(port, jeton, "inconnu", True)[0], 400)
+        self.assertEqual(self.regler(port, jeton, "naf", True)[0], 400, "pas de règle NAF dans cette mission")
+        for requete in ("&actif=2", "&actif=", "&actif=oui", ""):
+            code, _, corps = self.appeler(port, "POST", f"/reglage?t={jeton}&id=pays{requete}", b"")
+            self.assertEqual(code, 400, requete)
+            self.assertFalse(json.loads(corps)["ok"])
+        code, _, corps = self.appeler(port, "POST", f"/reglage?t={jeton}&actif=1", b"")
+        self.assertEqual(code, 400)
+        self.assertEqual(self.reglages(dossier)["pays"], False)
+        self.assertEqual(self.appeler(port, "GET", f"/reglage?t={jeton}&id=pays&actif=1")[0], 404, "seule la méthode POST écrit")
+        self.assertFalse(self.reglages(dossier)["pays"])
+        # la même chose écrite à la main dans reglages.json n'éteint pas l'intitulé non plus
+        (dossier / "reglages.json").write_text(json.dumps({"filtres": {"poste": False, "doublons": "non", "pays": 1}}), encoding="utf-8")
+        donnees = self.deposer(port, jeton, "export-brut-exemple.csv")[2]
+        self.assertEqual({f["id"]: f["actif"] for f in donnees["filtres"]}, CASES_DEFAUT, "intitulé toujours actif, valeurs qui ne sont pas vrai/faux ignorées")
+        self.assertEqual((donnees["conformes"], donnees["rejetes"]), (21, 9))
+
+    def test_cocher_la_liste_sans_liste_est_refuse(self):
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        (dossier / "exclusions.csv").unlink()
+        code, reponse = self.regler(port, jeton, "liste_exclusion", True)
+        self.assertEqual((code, reponse["ok"]), (400, False))
+        self.assertIn("Posez d'abord votre liste", reponse["erreur"])
+        self.assertFalse(self.reglages(dossier)["liste_exclusion"])
+
+    def test_un_filtre_decoche_ne_bloque_jamais_le_controle_avant_lancement(self):
+        """(b) Liste d'exclusion absente ou modifiée, champs obligatoires manquants : rien ne bloque tant que la case est décochée."""
+        dossier = self.monter()
+        (dossier / "exclusions.csv").unlink()
+        self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0, "liste absente, case décochée")
+        (dossier / "exclusions.csv").write_text("Entreprise\nAlpha\n", encoding="utf-8")
+        self.assertEqual(moulinette(dossier, str(self.EXPORT)).returncode, 0, "liste modifiée, case décochée")
+        self.assertEqual(self.passage(dossier)["conformes"], 21)
+        court = self.nouveau_dossier() / "court.csv"
+        court.write_text("Nom complet;Poste\nAda;CEO\nGrace;Stagiaire\n", encoding="utf-8")
+        processus = moulinette(dossier, str(court))
+        self.assertEqual(processus.returncode, 0, processus.stdout + processus.stderr)
+        self.assertEqual(self.passage(dossier)["conformes"], 1, "sans colonne Entreprise : les champs obligatoires sont décochés")
+        # cochés, les mêmes manques bloquent comme avant
+        self.cocher(dossier, champs_obligatoires=True)
+        processus = moulinette(dossier, str(court))
+        self.assertEqual(processus.returncode, 2, processus.stdout)
+        self.assertIn("la colonne « Entreprise »", processus.stdout)
+        self.cocher(dossier, champs_obligatoires=False, liste_exclusion=True)
+        processus = moulinette(dossier, str(self.EXPORT))
+        self.assertEqual(processus.returncode, 2, processus.stdout)
+        self.assertIn("n'est plus celle que vous avez validée", processus.stdout)
+
+    def test_la_validation_ne_depend_pas_des_cases(self):
+        """Cocher et décocher n'écrit jamais dans mission.json et ne demande aucune nouvelle validation ; ni le fichier de mission ni sa signature ne bougent."""
+        dossier, _, port, jeton = self.monter_et_demarrer()
+        mission = (dossier / "mission.json").read_bytes()
+        self.deposer(port, jeton, "export-brut-exemple.csv")
+        for identifiant in ("liste_exclusion", "champs_obligatoires", "pays", "activite", "taille", "doublons", "postes_exclus"):
+            self.assertEqual(self.regler(port, jeton, identifiant, identifiant not in ("doublons", "postes_exclus"))[0], 200)
+        self.assertEqual((dossier / "mission.json").read_bytes(), mission, "mission.json n'a pas bougé d'un octet")
+        _, configuration = m.charger_mission(dossier / "mission.json")
+        self.assertTrue(m.cible_validee(configuration), "la validation tient")
+        self.assertTrue(all(r["active"] is True for r in configuration["regles"]))
+        self.assertEqual(configuration["champsObligatoires"], ["nomComplet", "entreprise", "poste"])
+        self.assertTrue(configuration["blacklist"]["obligatoire"])
+        self.assertFalse(list(dossier.glob("*.tmp")) or list(dossier.glob("mission-*")), "aucune copie de mission ne reste dans le dossier")
+        self.assertEqual(self.passage(dossier)["signature_regles"], m.empreinte_regles(configuration), "le passage porte la signature de la mission complète")
+        self.assertIn("Règles validées le 17/11/2026", texte_visible(self.appeler(port, "GET", f"/regles?t={jeton}")[2].decode("utf-8")))
+
+
 class Emballage(Banc):
     def test_pyproject_declare_la_commande_et_le_fichier(self):
         try:
@@ -1197,7 +1586,7 @@ class Emballage(Banc):
         for nom in (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json"):
             donnees = json.loads((RACINE / nom).read_text(encoding="utf-8"))
             self.assertEqual(donnees.get("version") or donnees["metadata"]["version"], m.VERSION, nom)
-        self.assertEqual(m.VERSION, "1.5.0")
+        self.assertEqual(m.VERSION, "1.6.0")
         self.assertEqual(s.VERSION, m.VERSION)
 
     def test_la_competence_est_bien_formee(self):
@@ -1212,6 +1601,10 @@ class Emballage(Banc):
             self.assertIn(commande, texte)
         for lanceur in ("Ouvrir la moulinette.bat", "ouvrir-la-moulinette.command", "no agent and no terminal"):
             self.assertIn(lanceur, texte)
+        for mot in ("reglages.json", "tick", "contacts"):
+            self.assertIn(mot, texte)
+        self.assertNotIn("email_pro_obligatoire", texte)
+        self.assertNotIn("mobile_obligatoire", texte)
         self.assertIn("Ouvrir la moulinette", (RACINE / "README.md").read_text(encoding="utf-8"))
         moteur = (RACINE / "skills" / "leadlint" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("leadlint-setup", moteur.split("## When to use it")[1].split("\n")[2], "la compétence du moteur renvoie vers l'agent de setup")
@@ -1219,6 +1612,7 @@ class Emballage(Banc):
     def test_les_exemples_sont_coherents(self):
         reponses = s.lire_reponses(EXEMPLES / "reponses-exemple.json")[0]
         self.assertEqual(len(reponses["cibles"]), 2)
+        self.assertNotIn("email_pro_obligatoire", reponses)
         entetes, lignes = m.lire_tableau(EXEMPLES / "export-brut-exemple.csv")
         self.assertEqual(len(lignes), 30)
         devines = m.deviner_mapping(entetes, m.ENTETES_CANDIDATS)

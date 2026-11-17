@@ -51,8 +51,6 @@
     "min": 11,
     "max": 200
   },
-  "email_pro_obligatoire": true,
-  "mobile_obligatoire": false,
   "liste_exclusion": true,
   "champs_obligatoires": [
     "nomComplet",
