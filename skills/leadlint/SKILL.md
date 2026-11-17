@@ -22,6 +22,7 @@ Python 3.9+ and `openpyxl`. No network call. Verdicts, report lines, JSON keys a
 
 ## When to use it
 
+- Want your own cleaning script, built from a few questions? Use the `leadlint-setup` skill: it writes a script and a page of your rules, then runs this engine.
 - An export comes from a search tool (Sales Navigator, Pharow, Pipecorn…) and must be checked before paid enrichment or import into a campaign.
 - A purchased list or a CRM must be sorted by persona before a campaign.
 - An agent must deliver a list: it goes through this script, never through an eyeballed sort.

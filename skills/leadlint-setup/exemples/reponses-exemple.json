@@ -1,0 +1,63 @@
+{
+  "nom": "Prospection ESN exemple",
+  "pour": "Camille Exemple",
+  "pays": [
+    "France"
+  ],
+  "cibles": [
+    {
+      "nom": "Dirigeants",
+      "intitules": [
+        "CEO",
+        "Fondateur",
+        "Fondatrice",
+        "Founder",
+        "Co-founder",
+        "Co-fondateur",
+        "Gérant",
+        "Directeur général",
+        "Président"
+      ]
+    },
+    {
+      "nom": "Direction commerciale",
+      "intitules": [
+        "Directeur commercial",
+        "Directrice commerciale",
+        "Head of Sales",
+        "VP Sales"
+      ]
+    }
+  ],
+  "postes_exclus": [
+    "stagiaire",
+    "assistant",
+    "assistante",
+    "freelance",
+    "open to work"
+  ],
+  "secteurs": {
+    "mots_cles": [
+      "ESN",
+      "conseil informatique"
+    ],
+    "mots_exclus": [
+      "SaaS"
+    ],
+    "codes_naf": [],
+    "codes_naf_exclus": []
+  },
+  "taille": {
+    "min": 11,
+    "max": 200
+  },
+  "email_pro_obligatoire": true,
+  "mobile_obligatoire": false,
+  "liste_exclusion": true,
+  "champs_obligatoires": [
+    "nomComplet",
+    "entreprise",
+    "poste"
+  ],
+  "colonnes": {}
+}

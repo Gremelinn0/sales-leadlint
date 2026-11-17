@@ -11,7 +11,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = ["openpyxl>=3.0"]
-authors = [{ name = "ZEROGRAVITY" }]
+authors = [{ name = "Zero Gravity AI" }]
 keywords = ["sales", "prospecting", "b2b", "lead-qualification", "data-cleaning", "exclusion-list", "deduplication", "personas", "ai-agents"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -29,18 +29,21 @@ Repository = "https://github.com/Gremelinn0/sales-leadlint"
 
 [project.scripts]
 leadlint = "leadlint:main"
+leadlint-setup = "leadlint_setup:main"
 
 # One engine, one copy: skills/leadlint/scripts/leadlint.py. The version lives in that file (VERSION).
 [tool.hatch.version]
 path = "skills/leadlint/scripts/leadlint.py"
 
 # The wheel ships that same file as the top-level module `leadlint`, and the matrices next to it
-# (leadlint_data/matrices/), where the script looks for them once installed.
+# (leadlint_data/matrices/), where the script looks for them once installed. The setup agent's script
+# (leadlint_setup.py) ships as the top-level module `leadlint_setup`, beside the engine it imports.
 [tool.hatch.build.targets.wheel]
 bypass-selection = true
 
 [tool.hatch.build.targets.wheel.force-include]
 "skills/leadlint/scripts/leadlint.py" = "leadlint.py"
+"skills/leadlint/scripts/leadlint_setup.py" = "leadlint_setup.py"
 "skills/leadlint/matrices" = "leadlint_data/matrices"
 
 [tool.hatch.build.targets.sdist]
@@ -49,9 +52,11 @@ include = [
   "/README.md",
   "/LICENSE",
   "/skills/leadlint/scripts/leadlint.py",
+  "/skills/leadlint/scripts/leadlint_setup.py",
   "/skills/leadlint/matrices",
   "/skills/leadlint/exemples",
   "/skills/leadlint/references",
   "/skills/leadlint/SKILL.md",
+  "/skills/leadlint-setup",
   "/tests",
 ]

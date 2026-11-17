@@ -1067,7 +1067,7 @@ class Paquet(unittest.TestCase):
             self.skipTest("tomllib absent (Python < 3.11)")
         projet = tomllib.loads((RACINE / "pyproject.toml").read_text(encoding="utf-8"))
         self.assertEqual(projet["project"]["name"], "leadlint")
-        self.assertEqual(projet["project"]["scripts"], {"leadlint": "leadlint:main"})
+        self.assertEqual(projet["project"]["scripts"], {"leadlint": "leadlint:main", "leadlint-setup": "leadlint_setup:main"})
         self.assertIn("version", projet["project"]["dynamic"])
         self.assertEqual(projet["tool"]["hatch"]["version"]["path"], "skills/leadlint/scripts/leadlint.py")
         livre = projet["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]

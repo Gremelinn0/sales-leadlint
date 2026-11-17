@@ -4,6 +4,16 @@
 
 You give it an export (CSV or Excel) and a mission (a JSON file: your targeting rules and exclusion list). It tells you, for every line, `Conforme`, `À vérifier` or `Rejeté`, with a single cause, and it refuses to deliver anything until a human has validated the targeting.
 
+## Start in 5 lines
+
+1. Install [Claude Code](https://claude.com/claude-code) and Python 3.9+.
+2. In Claude Code: `/plugin marketplace add Gremelinn0/sales-leadlint`, then `/plugin install leadlint@leadlint`.
+3. Say: **« Set up leadlint for me »**. The agent asks about your targets, job titles and sectors.
+4. Read your rules in `ma-moulinette/regles.html` and say yes.
+5. Run `python ma-moulinette/moulinette.py my-export.csv`: your cleaned contacts are in `ma-moulinette/resultats/`.
+
+**En français, en 5 lignes.** Installez Claude Code et Python. Ajoutez le paquet avec les deux commandes de la ligne 2. Dites « installe ma moulinette » : l'agent vous demande vos cibles, vos postes et vos secteurs. Relisez vos règles dans `regles.html`, puis dites oui. Lancez `python ma-moulinette/moulinette.py mon-export.csv`. Tout reste sur votre ordinateur, sans compte.
+
 ## Try it in your browser first
 
 **https://zerogravity.builders/outils/segmentation** — same engine, in the browser, no install. Your files stay in the browser. If you are a human, start there: build your mission visually, run your list, download the result.
@@ -41,6 +51,7 @@ Without uv: clone the repository, `python -m pip install openpyxl` (Python 3.9+)
 | `leadlint preflight <export> --mission m.json [--exclusions x.csv]` | say only whether the mission may run, control by control |
 | `leadlint fingerprints --mission m.json [--exclusions x.csv]` | compute the fingerprints the mission memorises (strategy, search, filters, exclusion list) |
 | `leadlint personas <file>` | sort a column of job titles: department, seniority, inferred buying role |
+| `leadlint-setup create \| validate \| page` | write your own script and rules page from a few answers (see below) |
 
 Add `--json` to get the bilan on standard output, `--lignes` to add each line's verdict to it, `--diagnostic` to see the verdicts even when the preflight blocks (nothing deliverable is written).
 
@@ -78,6 +89,18 @@ The 31 rejections by cause: exclusion list 5, visible LinkedIn headcount out of 
 
 Writing the JSON by hand is not the point. Build and validate the mission in the web page (targeting rules, supplier filters, exclusion list), click **« Télécharger la mission pour votre IA »**, and give that file to your agent as `--mission`. The page dates and memorises the human validations; the script only checks them. Format: [`skills/leadlint/references/format-mission.md`](skills/leadlint/references/format-mission.md).
 
+## Your own cleaning script, from a few questions
+
+`leadlint-setup` is the other way in. Your agent (the `leadlint-setup` skill) asks a few questions about your targets, job titles and sectors, then writes **on your machine** a folder with your own script (`moulinette.py`) and a page (`regles.html`) that shows your rules in plain language. You read, you validate, then `python moulinette.py export.csv` gives you the cleaned contacts with their target. No account, no network.
+
+```bash
+leadlint-setup create reponses.json -o ma-moulinette --exclusions clients.csv
+leadlint-setup validate ma-moulinette        # only after the person has read regles.html and said yes
+python ma-moulinette/moulinette.py export.csv
+```
+
+Ask your agent: *« Set up leadlint for me »*. A complete fictional example (answers, export, exclusion list) is in [`skills/leadlint-setup/exemples/`](skills/leadlint-setup/exemples/). The folder carries its own copy of the engine; the engine itself is unchanged.
+
 ## Outputs are in French
 
 Verdicts (`Conforme`, `À vérifier`, `Rejeté`), the report lines, the JSON keys and the workbook labels are in French on purpose: the engine is shared with the French web page and a test checks the two give identical results, field by field. Agents read them fine; the command names and this documentation are in English.
@@ -109,6 +132,7 @@ The texts say « liste d'exclusion », « signature », « colonnes de correspon
 
 ```bash
 python tests/test_leadlint.py
+python tests/test_leadlint_setup.py
 ```
 
 Scenarios whose expected results are rendered by the web page's engine are replayed through the script: same verdicts, causes and fingerprints, field by field. The suite also runs the command line end to end (CSV, Excel, blocked preflight, diagnostic, booby-trapped cell), proves that each older command and option gives exactly the same output and exit code as its current name, refuses any word of the old vocabulary in what a person reads, checks that an installed copy finds its matrices, and contains negative controls that fail if a deliberate deviation goes unseen.
@@ -119,4 +143,4 @@ MIT.
 
 ---
 
-Made by ZEROGRAVITY — https://zerogravity.builders
+Made by Zero Gravity AI: https://zerogravity.builders
